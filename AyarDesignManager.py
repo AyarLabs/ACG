@@ -251,4 +251,4 @@ class AyarDesignManager:
         widths = [0.1, 0.1, 0.1, 0.1, 0.2]
         bot_dir = 'y'
         routing_grid = RoutingGrid(self.prj.tech_info, layers, spaces, widths, bot_dir)
-        self.tdb = TemplateDB('template_libs.def', routing_grid, self.impl_lib, use_cybagoa=True)  # Store templateDB
+        self.tdb = TemplateDB('template_libs.def', routing_grid, self.impl_lib, use_cybagoa=True, prj=self.prj)  # Store templateDB

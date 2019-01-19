@@ -66,7 +66,11 @@ class VirtualInst(VirtualObj):
     def export_locations(self) -> dict:
         """ Recursively shift all of the elements in the location dictionary """
         self.loc = {}
-        old_db = self.master.export_locations()
+        try:
+            old_db = self.master.export_locations()
+        except AttributeError:
+            print(f"{self.master.__class__.__name__} is not an ACG class, and does not have a location dict")
+            old_db = {}
         for key in old_db:
             # Iterate over all relevant locations in master
             if isinstance(old_db[key], list):

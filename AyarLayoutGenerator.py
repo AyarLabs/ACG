@@ -29,7 +29,6 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
         # Call TemplateBase's constructor
         TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
-
         self.tech = self.grid.tech_info
         # print(self.tech.get_via_drc_info(vname='ca', vtype='square', mtype='', mw_unit=1, is_bot=False))
         self._res = .001  # set basic grid size to be 1nm
@@ -229,6 +228,42 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         abstract_temp = self.new_template(params=params, temp_cls=LayoutAbstract)
         return abstract_temp
 
+    def import_cadence_layout(self,
+                              libname: str,
+                              cellname: str
+                              ) -> 'AyarLayoutGenerator':
+        """
+        This method will extract the layout specified by libname, cellname from Cadence, and return a new
+        LayoutAbstract master that can be placed in the current db. This method will also analyze the layout for
+        its pins and automatically add them to the location dictionary.
+
+        Parameters
+        ----------
+        libname : str
+            Cadence library name where the cell will be located
+        cellname : str
+            Cadence cell name of the layout to be imported
+
+        Returns
+        -------
+        master : LayoutAbstract
+            Newly created master that will contain the imported layout and pin information
+        """
+        # Grab layout information from Cadence through SKILL interface
+        temp_file_name = 'test.yaml'
+        expr = 'parse_cad_layout( "%s" "%s" "%s" )' % (libname, cellname, temp_file_name)
+        self.template_db._prj.impl_db._eval_skill(expr)
+
+        # Grab the raw layout data
+        with open(temp_file_name, 'r') as f:
+            data = yaml.load(f)
+
+        # Create the new master
+        return self.new_template(params={'libname': libname,
+                                         'cellname': cellname,
+                                         'data': data},
+                                 temp_cls=CadenceLayout)
+
     def connect_wires(self,
                       rect1,
                       rect2,
@@ -298,11 +333,17 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         """ Takes in all inst in the db and creates standard BAG equivalents """
         for inst in self._db['instance']:
             # Get the boundary of the instance
-            bound = inst.master.temp_boundary.shift_origin(origin=inst.origin, orient=inst.orient)
+            try:
+                bound = inst.master.temp_boundary.shift_origin(origin=inst.origin, orient=inst.orient)
+            except AttributeError:
+                # TODO: Get the size properly
+                bound = Rectangle(xy=[[0, 0], [.1, .1]], layer='M1', virtual=True)
             self.temp_boundary = self.temp_boundary.get_enclosure(bound)
             TemplateBase.add_instance(self,
-                                      inst.master, inst_name=inst.inst_name,
-                                      loc=inst.origin, orient=inst.orient)
+                                      inst.master,
+                                      inst_name=inst.inst_name,
+                                      loc=inst.origin,
+                                      orient=inst.orient)
 
     def _commit_via(self) -> None:
         """ Takes in all vias in the db and creates standard BAG equivalents """
@@ -320,6 +361,7 @@ class LayoutAbstract(AyarLayoutGenerator):
     """
     Generator class that instantiates an existing layout with LEF equivalent pins/obs(optional)
     """
+
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
         # Call super class' constructor
         AyarLayoutGenerator.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
@@ -400,6 +442,33 @@ class LayoutAbstract(AyarLayoutGenerator):
             if re.match('obs', keys):
                 for layers in self.cell_dict['obs']:
                     pass
-#                    for rects in self.cell_dict['obs'][layers]:
-#                        shape = self.add_rect(layers.upper(), rects, virtual=True)
-#                        self.loc['obs'].append(shape)
+
+
+class CadenceLayout(AyarLayoutGenerator):
+    """
+    Generator class that instantiates an existing layout from Cadence and fills the location dict
+    """
+
+    def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
+        AyarLayoutGenerator.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
+        self.loc = {}
+
+    @classmethod
+    def get_params_info(cls):
+        return dict(
+            libname='Name of the library to instantiate the cell from',
+            cellname='Name of the cell to instantiate',
+            data='data for location dict to attach to this master'
+        )
+
+    def layout_procedure(self):
+        for name, rect in self.params['data']['rects'].items():
+            if rect['layer'] == "prBoundary boundary":
+                layer = tuple(rect['layer'].split())
+                bbox = rect['bBox']
+                self.loc['bnd'] = Rectangle(xy=bbox, layer=layer, virtual=True)
+        self.instantiate_layout()
+
+    def instantiate_layout(self):
+        """We instantiate the layout as a primitive here based on the cell_name read"""
+        self.add_instance_primitive(lib_name=self.params['libname'], cell_name=self.params['cellname'], loc=(0, 0))
