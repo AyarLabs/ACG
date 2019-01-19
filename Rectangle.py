@@ -439,7 +439,6 @@ class Rectangle(VirtualObj):
                           ) -> str:
         """ Returns the highest layer used by provided rectangles """
 
-        pathname = 'ACG_GF45RFSOI/tech/GF45RFSOI_metal.yaml'  # TODO: Remove absolute file reference
         layerstack = bag.core._parse_yaml_file(pathname)['layerstack']  # TODO: Access layerstack from bag tech
 
         # Check for non-routing layers and return the highest routing layer

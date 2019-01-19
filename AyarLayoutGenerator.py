@@ -407,7 +407,6 @@ class LayoutAbstract(AyarLayoutGenerator):
 
     def get_tech_params(self):
         """Get tech information to ensure that information of metal stacks is passed through yaml and not hardcoded"""
-        pathname = 'ACG_GF45RFSOI/tech/GF45RFSOI_metal.yaml'
         tech_prop_temp = self.parse_yaml(pathname)
         self.tech_layers = tech_prop_temp['routing']
 
