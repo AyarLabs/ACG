@@ -1,6 +1,7 @@
 import bag
 from ACG.VirtualObj import VirtualObj
 from ACG.Rectangle import Rectangle
+from ACG import tech as tech_info
 
 
 class Via(VirtualObj):
@@ -47,7 +48,7 @@ class Via(VirtualObj):
         }
 
         # Get process specific data
-        self.tech_prop = bag.core._parse_yaml_file(pathname)
+        self.tech_prop = tech_info.tech_info
         self.routing = self.tech_prop['routing']
         self.metals = self.tech_prop['metals']
         self.vias = self.tech_prop['vias']

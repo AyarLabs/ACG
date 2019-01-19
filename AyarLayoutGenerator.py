@@ -6,6 +6,8 @@ to describe layout generation scripts in the Python language and automate the la
 # General imports
 import abc
 from typing import Union, Tuple
+import re
+import yaml
 
 # BAG imports
 import bag
@@ -16,8 +18,7 @@ from ACG.Rectangle import Rectangle
 from ACG.Track import Track
 from ACG.VirtualInst import VirtualInst
 from ACG.Via import Via
-import re
-import yaml
+from ACG import tech as tech_info
 
 
 class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
@@ -30,7 +31,6 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         # Call TemplateBase's constructor
         TemplateBase.__init__(self, temp_db, lib_name, params, used_names, **kwargs)
         self.tech = self.grid.tech_info
-        # print(self.tech.get_via_drc_info(vname='ca', vtype='square', mtype='', mw_unit=1, is_bot=False))
         self._res = .001  # set basic grid size to be 1nm
         # Create a dictionary that holds all objects required to construct the layout
         self._db = {
@@ -407,8 +407,7 @@ class LayoutAbstract(AyarLayoutGenerator):
 
     def get_tech_params(self):
         """Get tech information to ensure that information of metal stacks is passed through yaml and not hardcoded"""
-        tech_prop_temp = self.parse_yaml(pathname)
-        self.tech_layers = tech_prop_temp['routing']
+        self.tech_layers = tech_info.tech_info['routing']
 
     def calculate_pins(self):
         """Calculates the pins on the stdcell/macro and pushes them to loc dict"""

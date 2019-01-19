@@ -4,6 +4,7 @@ import bag
 from bag.layout.util import BBox
 from typing import Tuple, Union
 coord_type = Union[Tuple[float, float], XY]
+from ACG import tech as tech_info
 
 
 class Rectangle(VirtualObj):
@@ -438,8 +439,7 @@ class Rectangle(VirtualObj):
                           rect: 'Rectangle'
                           ) -> str:
         """ Returns the highest layer used by provided rectangles """
-
-        layerstack = bag.core._parse_yaml_file(pathname)['layerstack']  # TODO: Access layerstack from bag tech
+        layerstack = tech_info.tech_info['layerstack']  # TODO: Access layerstack from bag tech
 
         # Check for non-routing layers and return the highest routing layer
         # TODO: Clean up this logic to deal with non-routing layers
