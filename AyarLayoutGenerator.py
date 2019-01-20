@@ -8,6 +8,7 @@ import abc
 from typing import Union, Tuple
 import re
 import yaml
+import os
 
 # BAG imports
 import bag
@@ -254,9 +255,10 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         expr = 'parse_cad_layout( "%s" "%s" "%s" )' % (libname, cellname, temp_file_name)
         self.template_db._prj.impl_db._eval_skill(expr)
 
-        # Grab the raw layout data
+        # Grab the raw layout data, then delete it afterward
         with open(temp_file_name, 'r') as f:
             data = yaml.load(f)
+        os.remove(temp_file_name)
 
         # Create the new master
         return self.new_template(params={'libname': libname,
