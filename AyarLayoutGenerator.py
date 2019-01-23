@@ -20,6 +20,7 @@ from ACG.Track import Track
 from ACG.VirtualInst import VirtualInst
 from ACG.Via import Via
 from ACG import tech as tech_info
+from ACG.LayoutParse import CadenceLayoutParser
 
 
 class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
@@ -255,7 +256,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         expr = 'parse_cad_layout( "%s" "%s" "%s" )' % (libname, cellname, temp_file_name)
         self.template_db._prj.impl_db._eval_skill(expr)
 
-        # Grab the raw layout data, then delete it afterward
+        # Grab the raw layout data, then delete the temp file afterward
         with open(temp_file_name, 'r') as f:
             data = yaml.load(f)
         os.remove(temp_file_name)
@@ -462,11 +463,8 @@ class CadenceLayout(AyarLayoutGenerator):
         )
 
     def layout_procedure(self):
-        for name, rect in self.params['data']['rects'].items():
-            if rect['layer'] == "prBoundary boundary":
-                layer = tuple(rect['layer'].split())
-                bbox = rect['bBox']
-                self.loc['bnd'] = Rectangle(xy=bbox, layer=layer, virtual=True)
+        parser = CadenceLayoutParser(raw_content=self.params['data'])
+        self.loc = parser.generate_loc_dict()
         self.instantiate_layout()
 
     def instantiate_layout(self):
