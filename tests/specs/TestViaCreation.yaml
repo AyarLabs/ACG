@@ -1,0 +1,17 @@
+impl_lib: 'Sandbox'
+impl_cell: 'ViaTest'
+
+layout_package: 'ACG.tests.via_test'
+layout_class: 'TestViaCreation'
+
+layout_params:
+  bot_layer: 'M1'
+  bot_x: .1
+  bot_y: .1
+  top_layer: 'M2'
+  top_x: .1
+  top_y: .1
+
+root_dir: '.'
+sweep_params:
+  intent: [standard]

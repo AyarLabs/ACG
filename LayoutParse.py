@@ -47,7 +47,7 @@ class CadenceLayoutParser:
         # TODO: This code is dirty... there must be a better way
         for layer, label_list in self._label_list.items():
             for label in label_list:
-                for rect in self._rect_list[layer]:
+                for rect in self._rect_list.get(layer, []):
                     if label.contained_by(rect):
                         if label.name not in loc_dict:
                             loc_dict[label.name] = rect

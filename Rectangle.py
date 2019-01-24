@@ -439,12 +439,13 @@ class Rectangle(VirtualObj):
                           rect: 'Rectangle'
                           ) -> str:
         """ Returns the highest layer used by provided rectangles """
-        layerstack = tech_info.tech_info['layerstack']  # TODO: Access layerstack from bag tech
+        layerstack = tech_info.tech_info['metal_tech']['layerstack']  # TODO: Access layerstack from bag tech
 
         # Check for non-routing layers and return the highest routing layer
         # TODO: Clean up this logic to deal with non-routing layers
         if (self.layer not in layerstack) and (rect.layer not in layerstack):
-            raise ValueError('both {} and {} are not valid routing layers, and cannot be ordered')
+            print(f'both {self.layer} and {rect.layer} are not valid routing layers, and cannot be ordered')
+            return self.layer
         elif self.layer not in layerstack:
             return rect.layer
         elif rect.layer not in layerstack:

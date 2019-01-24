@@ -1,0 +1,9 @@
+impl_lib: 'Sandbox'
+impl_cell: 'ImportTest'
+
+layout_package: 'ACG.tests.test_cadence_import'
+layout_class: 'CadenceImportTest'
+
+layout_params:
+  libname: 'Sandbox'
+  cellname: 'TIALayout'

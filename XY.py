@@ -1,4 +1,3 @@
-# Python imports
 import numbers
 import numpy as np
 # ACG imports

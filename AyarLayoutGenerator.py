@@ -26,7 +26,7 @@ from ACG.LayoutParse import CadenceLayoutParser
 class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
     """
     The AyarLayoutGenerator class implements functions and variables for full-custom layout generations on physical
-    grids. Currently mainly optimized to support GF45RFSOI
+    grids
     """
 
     def __init__(self, temp_db, lib_name, params, used_names, **kwargs):
@@ -410,7 +410,7 @@ class LayoutAbstract(AyarLayoutGenerator):
 
     def get_tech_params(self):
         """Get tech information to ensure that information of metal stacks is passed through yaml and not hardcoded"""
-        self.tech_layers = tech_info.tech_info['routing']
+        self.tech_layers = tech_info.tech_info['metal_tech']['routing']
 
     def calculate_pins(self):
         """Calculates the pins on the stdcell/macro and pushes them to loc dict"""
