@@ -1,0 +1,17 @@
+impl_lib: 'Sandbox'
+impl_cell: 'LRouteTest'
+
+layout_package: 'ACG.tests.test_lroute'
+layout_class: 'TestLRoute'
+
+layout_params:
+  bot_layer: 'M1'
+  bot_size: [.1, 2]
+  bot_loc: [2, 2]
+  top_layer: 'M2'
+  top_size: [2, .1]
+  top_loc: [4, 4]
+
+root_dir: '.'
+sweep_params:
+  intent: [standard]

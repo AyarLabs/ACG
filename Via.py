@@ -48,7 +48,7 @@ class Via(VirtualObj):
         }
 
         # Get process specific data
-        self.tech_prop = tech_info.tech_info
+        self.tech_prop = tech_info.tech_info['metal_tech']
         self.routing = self.tech_prop['routing']
         self.metals = self.tech_prop['metals']
         self.vias = self.tech_prop['vias']

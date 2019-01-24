@@ -1,0 +1,13 @@
+impl_lib: 'ACG_examples'
+impl_cell: 'RoutingTest'
+
+layout_package: 'ACG.examples.Getting_Started_Test2'
+layout_class: 'RectTest'
+
+layout_params:
+  num_connections: 5
+
+sweep_params:
+  intent: [standard]
+
+root_dir: 'ACG/examples'
