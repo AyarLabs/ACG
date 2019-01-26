@@ -18,6 +18,7 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-TEST
-====
-ACG
+Introduction
+============
+Documentation for available functions and classes can be found at :ref:`modindex`
+
