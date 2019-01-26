@@ -1,14 +1,6 @@
 ACG package
 ===========
 
-Subpackages
------------
-
-.. toctree::
-
-    ACG.examples
-    ACG.tests
-
 Submodules
 ----------
 
