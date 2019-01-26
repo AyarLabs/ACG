@@ -21,8 +21,8 @@ import os
 import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-sys.path.append(os.environ['BAG_WORK_DIR'])
-exec(open('../../../bag_startup.py').read())
+#sys.path.append(os.environ['BAG_WORK_DIR'])
+#exec(open('../../../bag_startup.py').read())
 
 # -- General configuration ------------------------------------------------
 
