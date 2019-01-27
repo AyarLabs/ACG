@@ -1,0 +1,1 @@
+git+git://github.com/ucb-art/BAG_framework@master#egg=bag
