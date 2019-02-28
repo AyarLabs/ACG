@@ -111,7 +111,7 @@ class AyarDesignManager:
 
         self.prj.batch_schematic(impl_lib, inst_list, name_list=name_list)
 
-    def generate_tb(self, tb_params_list, tb_name_list):
+    def generate_tb(self, tb_params_list=None, tb_name_list=None):
         """
         Generates a batch of testbenches specified by tb_params_list and names them according to tb_name_list.
         Each dict in tb_params_list creates a new set of tb's
@@ -123,6 +123,11 @@ class AyarDesignManager:
         tb_name_list : :obj:'list' of :obj:'str'
             list of names to be applied to each implementation of the tb class
         """
+        # If no info is provided, extract parameters from the provided spec file
+        if tb_params_list is None or tb_name_list is None:
+            tb_name_list = self.specs['tb_params'].keys()
+            tb_params_list = self.specs['tb_params'].values()
+
         print('Generating Testbench')
         impl_lib = self.specs['impl_lib']
         impl_cell = self.specs['impl_cell']
@@ -131,6 +136,10 @@ class AyarDesignManager:
             tb_lib = info['tb_lib']
             tb_cell = info['tb_cell']
             tb_sch_params = info['tb_sch_params']
+            # If dut lib/cell is provided, override the impl lib/cell
+            if 'dut_lib' in info and 'dut_cell' in info:
+                impl_lib = info['dut_lib']
+                impl_cell = info['dut_cell']
 
             tb_dsn = self.prj.create_design_module(tb_lib, tb_cell)
             tb_dsn.design(dut_lib=impl_lib, dut_cell=impl_cell, **tb_sch_params)
