@@ -1,12 +1,21 @@
-import bag
 from ACG.VirtualObj import VirtualObj
 from ACG.Rectangle import Rectangle
 from ACG import tech as tech_info
+from typing import Optional, List, Tuple
 
 
-class Via(VirtualObj):
+class ViaStack(VirtualObj):
     """
-    A class enabling flexible creation/manipulation of ACG via stacks
+    A class enabling flexible creation/manipulation of ACG via stacks. There are two main ways that vias
+    can be created:
+
+    1. A bbox is created representing the area that a via is allowed to occupy, and then it is sent to bag
+    to fill with vias and enclosures
+
+    2. Rectangles are manually created to generate the desired via properties.
+
+    Generally if the user does not call any special properties, the first option will be used to ensure
+    DRC compliance. Note that the added options may or may not satisfy DRC constraints.
     """
 
     def __init__(self,
@@ -65,6 +74,7 @@ class Via(VirtualObj):
 
     def compute_via(self):
         """
+        TODO: Make this the central 'refresh' method
         Takes the stored rectangles and creates the overlap region necessary to meet the user constraints.
         BAG then uses this overlap region to generate the actual vias.
 
@@ -143,9 +153,136 @@ class Via(VirtualObj):
         """
         # 1) Get tech info for the highest metal pair in the via stack
         bot_layer, top_layer = self.metal_pairs[-1]
-        via_prop = self.vias[bot_layer + '_' + top_layer]
+        via_prop = self.vias['V' + bot_layer + '_' + top_layer]
 
         # 2) Compute overlap required to fit via of given size
         self.loc['overlap'].set_dim('x', via_prop['via_size'] + (self.size[0] - 1) * via_prop['via_pitch'])
         self.loc['overlap'].set_dim('y', via_prop['via_size'] + (self.size[1] - 1) * via_prop['via_pitch'])
         self.extend = True
+
+    def remove_enclosure(self) -> 'Via':
+        """
+        This method removes any metal enclosure on the generated via. Note that this will not be DRC clean
+        unless minimum area and minimum enclosure rules are satisfied by other routes you create
+        """
+        raise NotImplemented('Remove enclosure is currently not supported with via stacks')
+
+
+class Via(VirtualObj):
+    """
+    A class that wraps the functionality of adding primitive via types to the layout
+    """
+
+    # Get process specific data
+    tech_prop = tech_info.tech_info['metal_tech']
+    routing = tech_prop['routing']
+    metals = tech_prop['metals']
+    vias = tech_prop['vias']
+    dir = tech_prop['dir']
+
+    def __init__(self,
+                 via_id: str,
+                 bbox: Rectangle,
+                 size: Tuple[int, int] = (None, None),
+                 ):
+        """
+        Creates a Via based on the overlap region between the two provided rectangles.
+
+        Parameters
+        ----------
+        via_id: str
+            String representing the via type to be drawn.
+        size : (int, int)
+            Tuple representing the via array size in the (x, y) dimension
+        """
+        VirtualObj.__init__(self)
+
+        # User variable initialization
+        self.bbox = bbox
+        self.size = size
+        self.loc = {
+            'overlap': self.bbox,
+        }
+
+        # Via primitive properties
+        self.via_id = via_id
+        self.location = bbox.center.xy
+        self.num_rows: int = self.size[0]
+        self.num_cols: int = self.size[1]
+        self.sp_rows: float = 0
+        self.sp_cols: float = 0
+        self.enc_bot: List[float] = [0, 0, 0, 0]
+        self.enc_top: List[float] = [0, 0, 0, 0]
+        self.orient: str = 'R0'
+
+        # Generate the actual via
+        self.compute_via()
+
+    @classmethod
+    def from_metals(cls,
+                    rect1: Rectangle,
+                    rect2: Rectangle,
+                    size: Tuple[int, int] = (None, None)
+                    ) -> "Via":
+        """ Generates a via instance from two rectangles """
+        via_id0 = 'V' + rect1.layer + '_' + rect2.layer
+        via_id1 = 'V' + rect2.layer + '_' + rect1.layer
+        if via_id0 in cls.vias:
+            return cls(bbox=rect1.get_overlap(rect2),
+                       via_id=via_id0,
+                       size=size)
+        elif via_id1 in cls.vias:
+            return cls(bbox=rect2.get_overlap(rect1),
+                       via_id=via_id1,
+                       size=size)
+        else:
+            raise ValueError(f"A single via cannot be created between {rect1.layer} and {rect2.layer}")
+
+    def export_locations(self) -> dict:
+        return self.loc
+
+    def shift_origin(self, origin=(0, 0), orient='R0'):
+        pass
+
+    def compute_via(self):
+        """
+        This method extracts the expected via spacing and enclosure based on the provided via id
+        """
+        tech = self.vias[self.via_id]
+        self.sp_cols = tech['via_space']
+        self.sp_rows = tech['via_space']
+        self.enc_bot = [tech['uniform_enclosure']] * 4
+        self.enc_top = [tech['uniform_enclosure']] * 4
+
+    def remove_enclosure(self) -> 'Via':
+        """
+        This method removes any metal enclosure on the generated via. Note that this will not be DRC clean
+        unless minimum area and minimum enclosure rules are satisfied by other routes you create
+        """
+        tech = self.vias[self.via_id]
+        self.enc_bot = [tech['zero_enclosure']] * 4
+        self.enc_top = [tech['zero_enclosure']] * 4
+        return self
+
+    def set_enclosure(self,
+                      enc_bot=None,
+                      enc_top=None,
+                      type=None
+                      ) -> 'Via':
+        """
+        This method enables you to manually set the enclosure sizing for the top and bottom metal layers
+
+        Parameters
+        ----------
+        enc_bot : List[float]
+            enclosure size of the left, bottom, right, top edges of the bottom layer
+        enc_top : List[float]
+            enclosure size of the left, bottom, right, top edges of the top layer
+        type : str
+            TODO: Enables easy selection between asymmetric enclosure styles
+        """
+        if enc_bot:
+            self.enc_bot = enc_bot
+        if enc_top:
+            self.enc_top = enc_top
+        return self

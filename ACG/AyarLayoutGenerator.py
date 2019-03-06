@@ -18,7 +18,7 @@ from bag.layout.template import TemplateBase
 from ACG.Rectangle import Rectangle
 from ACG.Track import Track
 from ACG.VirtualInst import VirtualInst
-from ACG.Via import Via
+from ACG.Via import ViaStack, Via
 from ACG import tech as tech_info
 from ACG.LayoutParse import CadenceLayoutParser
 
@@ -38,6 +38,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         self._db = {
             'rect': [],
             'via': [],
+            'prim_via': [],
             'instance': [],
             'template': []
         }
@@ -268,29 +269,37 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                                  temp_cls=CadenceLayout)
 
     def connect_wires(self,
-                      rect1,
-                      rect2,
-                      size=(None, None),  # type: Tuple[int, int]
-                      extend=False  # type: bool
-                      ) -> Via:
+                      rect1: Rectangle,
+                      rect2: Rectangle,
+                      size: Tuple[int, int] = (None, None),
+                      extend: bool = False,
+                      prim: bool = False
+                      ) -> Union[ViaStack, Via]:
         """
         Creates a via stack between the two provided rectangles. This method requires that the provided rectangles
-        overlap. No knowledge of which rectangle is higher/lower in the metal stack is needed
+        overlap. No knowledge of which rectangle is higher/lower in the metal stack is needed.
 
-        Args:
-            rect1 (Rectangle):
-                first rectangle to be connected
-            rect2 (Rectangle):
-                second rectangle to be connected
-            size (Tuple[bool, bool]):
-                number of vias to be placed in the x and y dimension respectively. If (None, None), vias will be placed to
-                fill the enclosure
-            extend (Tuple[bool, bool]):
-                Represents whether the enclosure will be extended in the x or y direction to meet drc rules
+        Parameters
+        ----------
+        rect1: Rectangle
+            first rectangle to be connected
+        rect2: Rectangle
+            second rectangle to be connected
+        size: Tuple[int, int]
+            number of vias to be placed in the x and y dimension respectively. If (None, None), vias will be placed to
+            fill the enclosure
+        extend: bool
+            Represents whether the enclosure will be extended in the x or y direction to meet drc rules
+        prim: bool
+            if True, will attempt to create a single primitive via instead of a via stack
         """
         if rect1.layer != rect2.layer:
-            temp = Via(rect1, rect2, size=size, extend=extend)
-            self._db['via'].append(temp)
+            if prim:
+                temp = Via.from_metals(rect1, rect2, size=size)
+                self._db['prim_via'].append(temp)
+            else:
+                temp = ViaStack(rect1, rect2, size=size, extend=extend)
+                self._db['via'].append(temp)
             return temp
 
     def create_label(self, label, rect, purpose=None, show=True):
@@ -358,6 +367,17 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                                      top_layer=connection[1],
                                      bot_dir=via.bot_dir,
                                      extend=via.extend)
+        for via in self._db['prim_via']:
+            TemplateBase.add_via_primitive(self,
+                                           via_type=via.via_id,
+                                           loc=via.location,
+                                           num_rows=via.num_rows,
+                                           num_cols=via.num_cols,
+                                           sp_rows=via.sp_rows,
+                                           sp_cols=via.sp_cols,
+                                           enc1=via.enc_bot,
+                                           enc2=via.enc_top,
+                                           orient=via.orient)
 
 
 class LayoutAbstract(AyarLayoutGenerator):

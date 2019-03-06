@@ -430,7 +430,6 @@ class Rectangle(VirtualObj):
                       virtual: bool = True
                       ) -> 'Rectangle':
         """  Returns a rectangle that encloses all provided rectangles """
-
         ll = [min(self.ll.x, rect.ll.x), min(self.ll.y, rect.ll.y)]
         ur = [max(self.ur.x, rect.ur.x), max(self.ur.y, rect.ur.y)]
         return Rectangle(xy=[ll, ur], layer=self.get_highest_layer(rect), virtual=virtual)
