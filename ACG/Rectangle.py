@@ -1,10 +1,9 @@
 from ACG.VirtualObj import VirtualObj
 from ACG.XY import XY
-import bag
 from bag.layout.util import BBox
-from typing import Tuple, Union
-coord_type = Union[Tuple[float, float], XY]
+from typing import Tuple, Union, Optional
 from ACG import tech as tech_info
+coord_type = Union[Tuple[float, float], XY]
 
 
 class Rectangle(VirtualObj):
@@ -435,24 +434,27 @@ class Rectangle(VirtualObj):
         return Rectangle(xy=[ll, ur], layer=self.get_highest_layer(rect), virtual=virtual)
 
     def get_highest_layer(self,
-                          rect: 'Rectangle'
+                          rect: Optional['Rectangle'] = None,
+                          layer: Optional[str] = None
                           ) -> str:
         """ Returns the highest layer used by provided rectangles """
         layerstack = tech_info.tech_info['metal_tech']['layerstack']  # TODO: Access layerstack from bag tech
+        if rect:
+            layer = rect.layer
 
         # Check for non-routing layers and return the highest routing layer
         # TODO: Clean up this logic to deal with non-routing layers
-        if (self.layer not in layerstack) and (rect.layer not in layerstack):
-            print(f'both {self.layer} and {rect.layer} are not valid routing layers, and cannot be ordered')
+        if (self.layer not in layerstack) and (layer not in layerstack):
+            print(f'both {self.layer} and {layer} are not valid routing layers, and cannot be ordered')
             return self.layer
         elif self.layer not in layerstack:
-            return rect.layer
-        elif rect.layer not in layerstack:
+            return layer
+        elif layer not in layerstack:
             return self.layer
 
         i1 = layerstack.index(self.layer)
-        i2 = layerstack.index(rect.layer)
+        i2 = layerstack.index(layer)
         if i2 > i1:
-            return rect.layer
+            return layer
         else:
             return self.layer
