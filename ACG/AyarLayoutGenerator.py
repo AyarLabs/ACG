@@ -302,6 +302,29 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                 self._db['via'].append(temp)
             return temp
 
+    def add_prim_via(self,
+                     via_id: str,
+                     rect: Rectangle,
+                     size: Tuple[int, int] = (None, None),
+                     ) -> Via:
+        """
+        Creates a via stack between the two provided rectangles. This method requires that the provided rectangles
+        overlap. No knowledge of which rectangle is higher/lower in the metal stack is needed.
+
+        Parameters
+        ----------
+        via_id: str
+            id for the via to be drawn
+        rect: Rectangle
+            the rectangle bounding the region to draw the via
+        size: Tuple[int, int]
+            number of vias to be placed in the x and y dimension respectively. If (None, None), vias will be placed to
+            fill the enclosure
+        """
+        temp = Via(via_id, bbox=rect, size=size)
+        self._db['prim_via'].append(temp)
+        return temp
+
     def create_label(self, label, rect, purpose=None, show=True):
         if purpose is not None:
             self.add_rect([rect.layer, purpose], rect.xy)

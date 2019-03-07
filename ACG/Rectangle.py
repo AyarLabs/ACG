@@ -262,9 +262,9 @@ class Rectangle(VirtualObj):
         return self
 
     def stretch(self,
-                target_handle,  # type: str
+                target_handle: str,
                 ref_rect=None,
-                ref_handle=None,  # type: str
+                ref_handle: str = None,
                 track=None,
                 stretch_opt=(True, True),  # type: Tuple[bool, bool]
                 offset=(0, 0)  # type: Tuple[float, float]

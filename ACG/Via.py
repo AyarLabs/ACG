@@ -207,8 +207,6 @@ class Via(VirtualObj):
         # Via primitive properties
         self.via_id = via_id
         self.location = bbox.center.xy
-        self.num_rows: int = self.size[0]
-        self.num_cols: int = self.size[1]
         self.sp_rows: float = 0
         self.sp_cols: float = 0
         self.enc_bot: List[float] = [0, 0, 0, 0]
@@ -217,6 +215,14 @@ class Via(VirtualObj):
 
         # Generate the actual via
         self.compute_via()
+
+    @property
+    def num_rows(self) -> int:
+        return self.size[0]
+
+    @property
+    def num_cols(self) -> int:
+        return self.size[1]
 
     @classmethod
     def from_metals(cls,
