@@ -70,7 +70,7 @@ class ViaStack(VirtualObj):
         return self.loc
 
     def shift_origin(self, origin=(0, 0), orient='R0'):
-        pass
+        self.loc['overlap'].shift_origin(origin=origin, orient=orient)
 
     def compute_via(self):
         """
@@ -248,7 +248,7 @@ class Via(VirtualObj):
         return self.loc
 
     def shift_origin(self, origin=(0, 0), orient='R0'):
-        pass
+        self.loc['overlap'].shift_origin(origin=origin, orient=orient)
 
     def compute_via(self):
         """

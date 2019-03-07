@@ -38,7 +38,7 @@ class AutoRouter:
         self.config = config
 
         # State variables for where the route will be going
-        self.current_rect = self.gen.copy_rect(start_rect)
+        self.current_rect = self.gen.copy_rect(start_rect, virtual=False)
         self.current_dir = start_direction
         self.current_handle: str = ''
         self.layer = start_rect.layer
@@ -69,17 +69,40 @@ class AutoRouter:
         loc : Optional[Tuple[float, float]]
             XY location to route to. This method will only route in the current direction
         width : Optional[float]
-            TODO: Draws the new route segment with this width if provided
+            Draws the new route segment with this width if provided
 
         Returns
         -------
         self : AutoRouter
             Return self to make it easy to cascade connections
         """
+        # Make a new rectangle and align it to the current route location
+        new_rect = self.gen.add_rect(layer=self.current_rect.layer)
+
+        # Size the new rectangle to match the current route width
         if self.current_dir == '+x' or self.current_dir == '-x':
+            if width:
+                new_rect.set_dim('y', width)
+            else:
+                new_rect.set_dim('y', self.current_rect.get_dim('y'))
             stretch_opt = (True, False)
+            if self.current_dir == '+x':
+                new_rect.align('cl', ref_rect=self.current_rect, ref_handle=self.current_handle)
+            else:
+                new_rect.align('cr', ref_rect=self.current_rect, ref_handle=self.current_handle)
         else:
+            if width:
+                new_rect.set_dim('x', width)
+            else:
+                new_rect.set_dim('x', self.current_rect.get_dim('x'))
             stretch_opt = (False, True)
+            if self.current_dir == '+y':
+                new_rect.align('cb', ref_rect=self.current_rect, ref_handle=self.current_handle)
+            else:
+                new_rect.align('ct', ref_rect=self.current_rect, ref_handle=self.current_handle)
+
+        # Update the current rectangle pointer and stretch it to the desired location
+        self.current_rect = new_rect
         self.current_rect.stretch(target_handle=self.current_handle,
                                   offset=loc,
                                   stretch_opt=stretch_opt)
@@ -164,6 +187,7 @@ class AutoRouter:
 
     def draw_l_route(self,
                      loc: Union[Tuple[float, float], XY],
+                     in_width: Optional[float] = None,
                      out_width: Optional[float] = None,
                      layer: Optional[Union[str, Tuple[str, str]]] = None,
                      ) -> 'AutoRouter':
@@ -290,121 +314,3 @@ class AutoRouter:
             self.current_handle = 'ct'
         elif direction == '-y':
             self.current_handle = 'cb'
-
-
-class Route:
-    """
-    This class contains a list of rectangles and vias which describe a continuous route from one location to another.
-    Also contains convenience methods to modify the shape of the route
-    """
-
-    def __init__(self,
-                 gen_cls: AyarLayoutGenerator,
-                 start_loc: XY,
-                 start_dir: str,
-                 start_rect: Rectangle = None,
-                 ):
-        self.gen = gen_cls  # Class where we will be drawing the route
-        self.route_list = []  # Contains the full list of rects and vias
-
-        # Pointers to route in progress
-        self.current_rect = start_rect  # Contains the current rectangle being routed
-        self.current_dir = start_dir  # direction that the current rectangle is routing in
-        self.current_loc = start_loc  # pointer to the center location of the current route
-
-    def add_via(self, target_layer: str):
-        """
-        Places a via at the current location from the current rect's layer to the target_layer
-
-        Parameters
-        ----------
-        target_layer: str
-            the ending metal layer of the via stack
-        """
-        pass
-
-    def straight_route(self,
-                       location: XY,
-                       width: float = None,
-                       direction: str = None
-                       ) -> None:
-        """
-        Stretches the current route to move the provided location in a single direction
-
-        Parameters
-        ----------
-        location : XY
-            Location that the new route will be routed to
-        width : float
-            Width of the metal in microns. If None, defaults to the current rectangles width
-        direction : str
-            'x' or 'y' for which direction the current rectangle will be stretched. If None, defaults to the current
-            direction
-        """
-        if direction is None:
-            direction = self.current_dir
-        if width is None:
-            if direction == 'x':
-                width = self.current_rect.get_dim('y')
-            if direction == 'y':
-                width = self.current_rect.get_dim('x')
-
-        seg, end = self.draw_path_segment(start=self.current_loc,
-                                          layer=self.current_rect.layer,
-                                          width=width,
-                                          direction=direction,
-                                          end=location)
-        print(seg, end)
-        self.update_route_pointer(seg, end)
-
-    def update_route_pointer(self, rect: Rectangle, loc: XY) -> None:
-        self.route_list.append(rect)
-        self.current_rect = rect
-        self.current_loc = loc
-
-    def draw_path_segment(self,
-                          start: XY,
-                          layer: str,
-                          width: float,
-                          direction: str,
-                          end: XY
-                          ) -> Tuple[Rectangle, XY]:
-        """
-        This method manually draws the specified rectangle. This method does not place vias. If the end and start coords
-        do not share an x or y coordinate, the path is only drawn in the provided direction.
-
-        Parameters
-        ----------
-        start : XY
-            starting location of the path segment
-        layer : str
-            layer for the rectangle to be drawn
-        width : float
-            width of the route perpendicular to its direction
-        direction : str
-            direction in which the route will be drawn
-        end : XY
-            ending location of the path segment
-        """
-        seg = self.gen.add_rect(layer=layer)  # Create a new rectangle
-
-        # Set the size of the rectangle and align it to the starting point
-        if direction == 'x':
-            seg.set_dim(dim='x', size=abs(end.x - start.x))
-            seg.set_dim(dim='y', size=width)
-            if end.x > start.x:
-                seg.align(target_handle='cl', offset=start)
-                end_loc = seg['cr']
-            else:
-                seg.align(target_handle='cr', offset=start)
-                end_loc = seg['cl']
-        else:
-            seg.set_dim(dim='x', size=width)
-            seg.set_dim(dim='y', size=abs(end.y - start.y))
-            if end.y > start.y:
-                seg.align(target_handle='cb', offset=start)
-                end_loc = seg['ct']
-            else:
-                seg.align(target_handle='ct', offset=start)
-                end_loc = seg['cb']
-        return seg, end_loc
