@@ -326,6 +326,7 @@ class AutoRouter:
         * This method attempts to generate a manhattanized list of points that contains all of the user
         provided points while minimizing the number of times the direction of the route changes
         * Then a set of cascaded L-routes is created to connect all of the coordinates in the mahattanized point list
+        * TODO: Make it more clear what the points datastructure is doing
 
         Parameters
         ----------
@@ -341,11 +342,11 @@ class AutoRouter:
             returns itself so that route segments can be easily chained together
         """
         current_dir = self.current_dir
-        current_point = self.current_rect[self.current_handle]
+        current_point = (self.current_rect[self.current_handle].xy, self.current_rect.layer)
 
         if relative_coords:
             # If passed coordinates are relative, need to add WgRouter's port location to convert to absolute coords
-            x0, y0 = current_point
+            x0, y0 = current_point[0]
             points = [(x + x0, y + y0) for x, y in points]
 
         # Generate a manhattanized list of waypoints on the route while minimizing the number of required bends
@@ -354,22 +355,21 @@ class AutoRouter:
                                                        points=points)
         # Simplify the point list so that each point corresponds with a bend of the route, i.e. no co-linear points
         final_point_list = self.reduce_point_list(manh_point_list)
-        print(final_point_list)
         final_point_list = final_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
 
         # Draw a series of L-routes to follow the final simplified point list
         for end_point in final_point_list[1:]:
             # Draw the L-route while omitting the final straight route so that another L-route can be appended to
             # it in the next for loop iteration
-            self.draw_l_route(loc=end_point[0:2],
-                              layer=end_point[2],
+            self.draw_l_route(loc=end_point[0],
+                              layer=end_point[1],
                               in_width=self.config[self.current_rect.layer]['width'],
                               out_width=self.config[self.current_rect.layer]['width'],
                               enc_style='asymm',
                               omit_final_segment=True)
 
         # The loop does not draw the final straight waveguide segment, so add it here
-        self.draw_straight_route(manh_point_list[-1])
+        self.draw_straight_route(manh_point_list[-1][0])
 
     @staticmethod
     def manhattanize_point_list(initial_direction, initial_point, points):
@@ -381,15 +381,14 @@ class AutoRouter:
         -----
         * Turn minimization is achieved in the following way: If the current direction is x, then the next point in
         the list will have dy = 0. If the current direction is y, then the next point in the list will have dx = 0
-        * TODO: Fix layer allocation bugs
 
         Parameters
         ----------
         initial_direction : str
             The current routing direction which must be maintained in the first segment
-        initial_point : Tuple
+        initial_point : Tuple[Tuple[float, float], str]
             (x, y) coordinate location where the route will begin
-        points : List[Tuple[float, float]]
+        points : List[Tuple[Tuple[float, float], str]]
             List of coordinates which must also exist in the final manhattanized list
 
         Returns
@@ -401,24 +400,24 @@ class AutoRouter:
             current_dir = 'x'
         else:
             current_dir = 'y'
+        manh_point_list = [initial_point]
         current_point = initial_point
-        manh_point_list = [current_point]
         # Iteratively generate a manhattan point list from the user provided point list
         for next_point in points:
-            dx, dy = (next_point[0] - current_point[0]), (next_point[1] - current_point[1])
+            dx, dy = (next_point[0][0] - current_point[0][0]), (next_point[0][1] - current_point[0][1])
             # If the upcoming point has a relative offset in both dimensions
             if dx != 0 and dy != 0:
                 # Add an intermediate point
                 if current_dir == 'x':
                     # First move in x direction then y
-                    manh_point_list.append((current_point[0] + dx, current_point[1], next_point[2]))
-                    manh_point_list.append((current_point[0] + dx, current_point[1] + dy, next_point[2]))
+                    manh_point_list.append(((current_point[0][0] + dx, current_point[0][1]), current_point[1]))
+                    manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), next_point[1]))
                     current_point = manh_point_list[-1]
                     current_dir = 'y'
                 else:
                     # First move in y direction then x
-                    manh_point_list.append((current_point[0], current_point[1] + dy, next_point[2]))
-                    manh_point_list.append((current_point[0] + dx, current_point[1] + dy, next_point[2]))
+                    manh_point_list.append(((current_point[0][0], current_point[0][1] + dy), current_point[1]))
+                    manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), next_point[1]))
                     current_point = manh_point_list[-1]
                     current_dir = 'x'
             # If the point does not move ignore it to avoid adding co-linear points
@@ -426,7 +425,7 @@ class AutoRouter:
                 continue
             # If the next point only changes in one direction and it is not co-linear
             else:
-                manh_point_list.append((current_point[0] + dx, current_point[1] + dy, current_point[2]))
+                manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), current_point[1]))
                 current_point = manh_point_list[-1]
                 if dx == 0:
                     current_dir = 'y'
@@ -470,9 +469,9 @@ class AutoRouter:
         end_pt = 2
 
         while end_pt < tot_length:
-            start = points[start_pt]
-            middle = points[middle_pt]
-            end = points[end_pt]
+            start = points[start_pt][0]
+            middle = points[middle_pt][0]
+            end = points[end_pt][0]
 
             # Compute start-middle and middle-end derivatives
             dx0, dy0 = (middle[0] - start[0]), (middle[1] - start[1])
@@ -490,7 +489,7 @@ class AutoRouter:
 
             # If not co-linear, add the middle point to the list
             if colinear is False:
-                reduced_point_list.append(middle)
+                reduced_point_list.append(points[middle_pt])
 
             # Increment pointers
             start_pt += 1
