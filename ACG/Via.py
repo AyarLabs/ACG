@@ -70,11 +70,10 @@ class ViaStack(VirtualObj):
         return self.loc
 
     def shift_origin(self, origin=(0, 0), orient='R0'):
-        self.loc['overlap'].shift_origin(origin=origin, orient=orient)
+        self.loc['overlap'] = self.loc['overlap'].shift_origin(origin=origin, orient=orient)
 
     def compute_via(self):
         """
-        TODO: Make this the central 'refresh' method
         Takes the stored rectangles and creates the overlap region necessary to meet the user constraints.
         BAG then uses this overlap region to generate the actual vias.
 

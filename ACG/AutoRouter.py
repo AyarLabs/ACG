@@ -134,9 +134,9 @@ class AutoRouter:
         size : Optional[Tuple[int, int]]
             number of vias to place in the array
         enc_bot : List[float]
-            enclosure size of the left, bottom, right, top edges of the bottom layer of the via
+            enclosure size of the left, right, top, bot edges of the bottom layer of the via
         enc_top : List[float]
-            enclosure size of the left, bottom, right, top edges of the top layer of the via
+            enclosure size of the left, right, top, bot edges of the top layer of the via
 
         Returns
         -------
@@ -190,6 +190,8 @@ class AutoRouter:
                      in_width: Optional[float] = None,
                      out_width: Optional[float] = None,
                      layer: Optional[Union[str, Tuple[str, str]]] = None,
+                     enc_bot: Optional[List[float]] = None,
+                     enc_top: Optional[List[float]] = None
                      ) -> 'AutoRouter':
         """
         Draws an L-route from the current location to the provided location while minimizing
@@ -199,12 +201,18 @@ class AutoRouter:
         ----------
         loc : Union[Tuple[float, float], XY]
             Final location of the route
+        in_width : Optional[float]
+            If provided, will change the first route segment to the desired width
         out_width : Optional[float]
             If provided, will set the second segment of the l-route to match this width, otherwise
             will maintain the same width
         layer : Optional[Union[str, Tuple[str, str]]]
             If provided will draw the second segment of the l-route on this metal layer, otherwise
             will stay on the same layer
+        enc_bot: Optional[List[float]]
+            If provided, will use these enclosure settings for the bottom layer of the via
+        enc_top: Optional[List[float]]
+            If provided, will use these enclosure settings for the top layer of the via
 
         Returns
         -------
@@ -212,7 +220,7 @@ class AutoRouter:
             Return self to make it easy to cascade connections
         """
         # Draw the first straight route segment
-        self.draw_straight_route(loc=loc)
+        self.draw_straight_route(loc=loc, width=in_width)
 
         # Draw the via to turn the l-route
         # If layer is None, stay on the same layer
@@ -237,11 +245,12 @@ class AutoRouter:
                 direction = '-x'
         self.draw_via(layer=layer,
                       direction=direction,
-                      out_width=out_width)
+                      out_width=out_width,
+                      enc_top=enc_top,
+                      enc_bot=enc_bot)
 
         # Draw the final straight route segment
         self.draw_straight_route(loc=loc)
-
         return self
 
     ''' Old Routing Methods to be Deprecated '''
