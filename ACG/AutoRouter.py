@@ -5,9 +5,9 @@ from .tech import tech_info
 from typing import Tuple, Union, Optional, List
 
 
-class AutoRouter:
+class EZRouter:
     """
-    The Autorouter class provides a number of methods to automatically generate simple wire routes in ACG
+    The EZRouter class provides a number of methods to automatically generate simple wire routes in ACG
     """
 
     def __init__(self,
@@ -57,7 +57,7 @@ class AutoRouter:
     def draw_straight_route(self,
                             loc: Union[Tuple[float, float], XY],
                             width: Optional[float] = None
-                            ) -> 'AutoRouter':
+                            ) -> 'EZRouter':
         """
         Routes a straight metal line from the current location of specified length. This
         method does not change the current routing direction.
@@ -112,12 +112,12 @@ class AutoRouter:
     def draw_via(self,
                  layer: Union[str, Tuple[str, str]],
                  direction: str,
-                 out_width: float,
                  enc_style: str = 'uniform',
+                 out_width: Optional[float] = None,
                  size: Optional[Tuple[int, int]] = None,
                  enc_bot: Optional[List[float]] = None,
                  enc_top: Optional[List[float]] = None,
-                 ) -> 'AutoRouter':
+                 ) -> 'EZRouter':
         """
         This method adds a via at the current location to the user provided layer. Cannot
         move by more than one layer at a time
@@ -152,6 +152,9 @@ class AutoRouter:
         new_rect.align(target_handle='c',
                        ref_rect=self.current_rect,
                        ref_handle=self.current_handle)
+
+        if not out_width:
+            out_width = self.config[layer]['width']
 
         # Match the route width of the current route
         if self.current_dir == '+x' or self.current_dir == '-x':
@@ -243,7 +246,7 @@ class AutoRouter:
                      enc_bot: Optional[List[float]] = None,
                      enc_top: Optional[List[float]] = None,
                      omit_final_segment: bool = False
-                     ) -> 'AutoRouter':
+                     ) -> 'EZRouter':
         """
         Draws an L-route from the current location to the provided location while minimizing
         the number of turns.
@@ -327,6 +330,7 @@ class AutoRouter:
         provided points while minimizing the number of times the direction of the route changes
         * Then a set of cascaded L-routes is created to connect all of the coordinates in the mahattanized point list
         * TODO: Make it more clear what the points datastructure is doing
+        * TODO: Add checks to ensure we dont try to turn in impossible directions
 
         Parameters
         ----------
@@ -347,32 +351,109 @@ class AutoRouter:
         if relative_coords:
             # If passed coordinates are relative, need to add WgRouter's port location to convert to absolute coords
             x0, y0 = current_point[0]
-            points = [(x + x0, y + y0) for x, y in points]
+            points = [((pt[0] + x0, pt[1] + y0), layer) for pt, layer in points]
 
         # Generate a manhattanized list of waypoints on the route while minimizing the number of required bends
         manh_point_list = self.manhattanize_point_list(initial_direction=current_dir,
                                                        initial_point=current_point,
                                                        points=points)
         # Simplify the point list so that each point corresponds with a bend of the route, i.e. no co-linear points
-        final_point_list = self.reduce_point_list(manh_point_list)
+        final_point_list = manh_point_list
         final_point_list = final_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
 
         # Draw a series of L-routes to follow the final simplified point list
-        for end_point in final_point_list[1:]:
-            # Draw the L-route while omitting the final straight route so that another L-route can be appended to
-            # it in the next for loop iteration
-            self.draw_l_route(loc=end_point[0],
-                              layer=end_point[1],
-                              in_width=self.config[self.current_rect.layer]['width'],
-                              out_width=self.config[self.current_rect.layer]['width'],
-                              enc_style='asymm',
-                              omit_final_segment=True)
+        for pt0, pt1 in zip(final_point_list, final_point_list[1:]):
+            # print(f'drawing route {pt0[0]} -> {pt1[0]} on layer {pt0[1]}')
+            self._draw_route_segment(pt0=pt0,
+                                     pt1=pt1,
+                                     in_width=self.config[self.current_rect.layer]['width'],
+                                     out_width=self.config[pt0[1]]['width'],
+                                     enc_style='asymm')
 
-        # The loop does not draw the final straight waveguide segment, so add it here
-        self.draw_straight_route(manh_point_list[-1][0])
+        # The loop does not draw the final straight segment, so add it here
+        self._draw_route_segment(pt0=final_point_list[-1],
+                                 pt1=None,
+                                 in_width=self.config[self.current_rect.layer]['width'],
+                                 out_width=self.config[final_point_list[-1][1]]['width'],
+                                 enc_style='uniform')
+
+    def _draw_route_segment(self,
+                            pt0: Union[Tuple[float, float], XY],
+                            pt1: Optional[Union[Tuple[float, float], XY]],
+                            enc_style: str = 'uniform',
+                            in_width: Optional[float] = None,
+                            out_width: Optional[float] = None,
+                            enc_bot: Optional[List[float]] = None,
+                            enc_top: Optional[List[float]] = None,
+                            ) -> 'AutoRouter':
+        """
+        Draws a single straight route to pt0 then changes the direction of the route to be able to
+        route to pt1
+
+        Parameters
+        ----------
+        pt0 : List[Tuple]
+            First point in the route
+        pt1 : Optional[List[Tuple]]
+            Second point in the route
+        enc_style : str
+            'uniform' to draw uniform enclosures, 'asymm' to draw min size asymmetric enclosures
+        in_width : Optional[float]
+            If provided, will change the first route segment to the desired width
+        out_width : Optional[float]
+            If provided, will set the second segment of the l-route to match this width, otherwise
+            will maintain the same width
+        enc_bot : Optional[List[float]]
+            If provided, will use these enclosure settings for the bottom layer of the via
+        enc_top : Optional[List[float]]
+            If provided, will use these enclosure settings for the top layer of the via
+
+        Returns
+        -------
+        self : AutoRouter
+            Return self to make it easy to cascade connections
+        """
+        # Draw the first straight route segment
+        self.draw_straight_route(loc=pt0[0], width=in_width)
+
+        # Draw the via to turn the l-route
+        # If an output width is not provided, use the same as the current width
+        if not out_width:
+            if self.current_dir == '+x' or self.current_dir == '-x':
+                out_width = self.current_rect.get_dim('y')
+            else:
+                out_width = self.current_rect.get_dim('x')
+        # Determine the output direction by checking the displacement to the next point
+        # in the list
+        if pt1:
+            # TODO: Handle co-linear points properly here
+            if self.current_dir == '+x' or self.current_dir == '-x':
+                if self.current_rect[self.current_handle].y < XY(pt1[0]).y:
+                    direction = '+y'
+                else:
+                    direction = '-y'
+            else:
+                if self.current_rect[self.current_handle].x < XY(pt1[0]).x:
+                    direction = '+x'
+                else:
+                    direction = '-x'
+        # If no next point is provided because it is at the end of the route, just use the
+        # current direction.
+        # TODO: Figure out if this is really the best way to go...
+        else:
+            direction = self.current_dir
+        self.draw_via(layer=pt0[1],
+                      direction=direction,
+                      enc_style=enc_style,
+                      out_width=out_width,
+                      enc_top=enc_top,
+                      enc_bot=enc_bot)
+        return self
 
     @staticmethod
-    def manhattanize_point_list(initial_direction, initial_point, points):
+    def manhattanize_point_list(initial_direction: str,
+                                initial_point: Tuple[Tuple[float, float], str],
+                                points: List[Tuple[Tuple[float, float], str]]):
         """
         Manhattanizes a provided list of (x, y) points while minimizing the number of times the direction changes.
         Manhattanization ensures that every segment of the route only traverses either the x or y direction.
@@ -411,13 +492,13 @@ class AutoRouter:
                 if current_dir == 'x':
                     # First move in x direction then y
                     manh_point_list.append(((current_point[0][0] + dx, current_point[0][1]), current_point[1]))
-                    manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), next_point[1]))
+                    manh_point_list.append(next_point)
                     current_point = manh_point_list[-1]
                     current_dir = 'y'
                 else:
                     # First move in y direction then x
                     manh_point_list.append(((current_point[0][0], current_point[0][1] + dy), current_point[1]))
-                    manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), next_point[1]))
+                    manh_point_list.append(next_point)
                     current_point = manh_point_list[-1]
                     current_dir = 'x'
             # If the point does not move ignore it to avoid adding co-linear points
@@ -425,79 +506,13 @@ class AutoRouter:
                 continue
             # If the next point only changes in one direction and it is not co-linear
             else:
-                manh_point_list.append(((current_point[0][0] + dx, current_point[0][1] + dy), current_point[1]))
+                manh_point_list.append(next_point)
                 current_point = manh_point_list[-1]
                 if dx == 0:
                     current_dir = 'y'
                 else:
                     current_dir = 'x'
         return manh_point_list
-
-    @staticmethod
-    def reduce_point_list(points: List[Union[Tuple[float, float], XY]]):
-        """
-        Returns a new list with all co-linear points removed. This algorithm requires that the point list has already
-        been manhattanized so that only dx or dy is 0 for any set of adjacent points. Redundant points must also have
-        been removed.
-
-        Notes
-        -----
-        * Create 3 pointers to locations on the point list: start, middle, end. Place them at the first three points
-        in the list
-        * Detect whether middle is co-linear with start and end by measuring the derivatives between the three points
-        * If the derivatives are such that the points are not co-linear, add the middle point to the reduced point list
-        * If the derivatives are such that the points are co-linear, do not add the middle point to the list
-        * Increment all 3 pointers
-
-        Parameters
-        ----------
-        points : List[coord_type]
-            Input list of points outlining the route to be drawn
-
-        Returns
-        -------
-        reduced_point_list : List[coord_type]
-            Point list without co-linear or redundant points
-        """
-        reduced_point_list = list()
-        reduced_point_list.append(points[0])  # Always start with the first point in the list
-
-        # Initialize pointers to the first three elements in the list
-        tot_length = len(points)
-        start_pt = 0
-        middle_pt = 1
-        end_pt = 2
-
-        while end_pt < tot_length:
-            start = points[start_pt][0]
-            middle = points[middle_pt][0]
-            end = points[end_pt][0]
-
-            # Compute start-middle and middle-end derivatives
-            dx0, dy0 = (middle[0] - start[0]), (middle[1] - start[1])
-            dx1, dy1 = (end[0] - middle[0]), (end[1] - middle[1])
-
-            # Since the manhattanization routine ensures that either dx or dy is 0, but not both for all pairs of
-            # adjacent points, co-linearity between 3 points can determined simply by checking if either dx is non-zero
-            # for both pairs or dy is non-zero for both pairs
-            if dx0 != 0 and dx1 != 0:
-                colinear = True
-            elif dy0 != 0 and dy1 != 0:
-                colinear = True
-            else:
-                colinear = False
-
-            # If not co-linear, add the middle point to the list
-            if colinear is False:
-                reduced_point_list.append(points[middle_pt])
-
-            # Increment pointers
-            start_pt += 1
-            middle_pt += 1
-            end_pt += 1
-
-        reduced_point_list.append(points[-1])  # Always finish with the last point in the list
-        return reduced_point_list
 
     ''' Old Routing Methods to be Deprecated '''
 
