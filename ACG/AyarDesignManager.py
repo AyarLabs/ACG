@@ -182,7 +182,7 @@ class AyarDesignManager:
         print('all simulation done')
         return results_dict
 
-    def run_LVS(self, cell_name_list):
+    def run_LVS(self, cell_name_list=None):
         """
         Runs LVS on a batch of cells contained within the implementation library
 
@@ -191,6 +191,9 @@ class AyarDesignManager:
         cell_name_list : :obj:'list' of :obj:'str'
             list of strings containing the names of the cells we should run LVS on
         """
+        if not cell_name_list:
+            cell_name_list = [self.specs['impl_cell']]
+
         for cell_name in cell_name_list:
             print('Running LVS on {}'.format(cell_name))
             lvs_passed, lvs_log = self.prj.run_lvs(self.impl_lib, cell_name)

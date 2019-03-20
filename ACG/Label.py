@@ -67,9 +67,9 @@ class Label(VirtualObj):
             True if the label and rectangle overlap
         """
         # Check that we are in between the left and right edges
-        if self.x > rect.loc['l'] and self.x < rect.loc['r']:
+        if self.x >= rect.loc['l'] and self.x <= rect.loc['r']:
             # Then check that we are in between the top and bottom edges
-            if self.y > rect.loc['b'] and self.y < rect.loc['t']:
+            if self.y >= rect.loc['b'] and self.y <= rect.loc['t']:
                 return True
         else:
             return False

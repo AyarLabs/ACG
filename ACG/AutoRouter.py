@@ -385,7 +385,7 @@ class EZRouter:
                             out_width: Optional[float] = None,
                             enc_bot: Optional[List[float]] = None,
                             enc_top: Optional[List[float]] = None,
-                            ) -> 'AutoRouter':
+                            ) -> 'EZRouter':
         """
         Draws a single straight route to pt0 then changes the direction of the route to be able to
         route to pt1
@@ -453,7 +453,8 @@ class EZRouter:
     @staticmethod
     def manhattanize_point_list(initial_direction: str,
                                 initial_point: Tuple[Tuple[float, float], str],
-                                points: List[Tuple[Tuple[float, float], str]]):
+                                points: List[Tuple[Tuple[float, float], str]]
+                                ) -> List[Tuple[Tuple[float, float], str]]:
         """
         Manhattanizes a provided list of (x, y) points while minimizing the number of times the direction changes.
         Manhattanization ensures that every segment of the route only traverses either the x or y direction.
