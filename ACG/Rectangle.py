@@ -29,10 +29,11 @@ class Rectangle(VirtualObj):
         self._ll = None
         self._ur = None
         self._res = .001
+        self._lpp: Tuple[str, str] = None
 
         # Init local variables
         self.xy = xy  # property setter creates ll and ur coordinates
-        self.layer: str = layer
+        self.layer = layer
         self.virtual: bool = virtual
         self.loc = {
             'll': 0,
@@ -93,6 +94,33 @@ class Rectangle(VirtualObj):
             return rect
 
     """ Properties """
+
+    @property
+    def layer(self):
+        return self._lpp[0]
+        # return self._lpp
+
+    @layer.setter
+    def layer(self, value):
+        if isinstance(value, tuple) and len(value) == 2:
+            self._lpp = value
+        elif isinstance(value, list) and len(value) == 2:
+            self._lpp = tuple(value)
+        elif isinstance(value, str):
+            self._lpp = (value, 'drawing')
+        else:
+            raise ValueError(f"{value} cannot be used as a layer or layer purpose pair")
+
+    @property
+    def lpp(self) -> Tuple[str, str]:
+        return self._lpp
+
+    @lpp.setter
+    def lpp(self, value):
+        if len(value == 2):
+            self._lpp = tuple(value)
+        else:
+            raise ValueError(f"{value} cannot be used as a layer purpose pair")
 
     @property
     def ll(self) -> XY:
@@ -379,7 +407,7 @@ class Rectangle(VirtualObj):
             'xy0': new_xy[0],
             'xy1': new_xy[1],
             'virtual': virtual,
-            'layer': self.layer
+            'layer': self.lpp
         }
         return Rectangle.from_dict(rect_dict)
 
@@ -388,7 +416,7 @@ class Rectangle(VirtualObj):
 
     def copy(self, virtual=False, layer=None) -> 'Rectangle':
         if layer is None:
-            layer = self.layer
+            layer = self.lpp
         return Rectangle(self.xy, layer, virtual=virtual)
 
     def get_overlap(self,
@@ -421,7 +449,7 @@ class Rectangle(VirtualObj):
 
         return Rectangle([[x_min, y_min],
                           [x_max, y_max]],
-                         layer=self.layer,
+                         layer=self.lpp,
                          virtual=virtual)
 
     def get_enclosure(self,
@@ -436,25 +464,29 @@ class Rectangle(VirtualObj):
     def get_highest_layer(self,
                           rect: Optional['Rectangle'] = None,
                           layer: Optional[str] = None
-                          ) -> str:
+                          ) -> Tuple[str, str]:
         """ Returns the highest layer used by provided rectangles """
         layerstack = tech_info.tech_info['metal_tech']['layerstack']  # TODO: Access layerstack from bag tech
         if rect:
             layer = rect.layer
+            lpp = rect.lpp
+        else:
+            layer = layer
+            lpp = (layer, 'drawing')
 
         # Check for non-routing layers and return the highest routing layer
         # TODO: Clean up this logic to deal with non-routing layers
         if (self.layer not in layerstack) and (layer not in layerstack):
-            print(f'both {self.layer} and {layer} are not valid routing layers, and cannot be ordered')
-            return self.layer
+            # print(f'both {self.layer} and {layer} are not valid routing layers, and cannot be ordered')
+            return self.lpp
         elif self.layer not in layerstack:
-            return layer
+            return lpp
         elif layer not in layerstack:
-            return self.layer
+            return self.lpp
 
         i1 = layerstack.index(self.layer)
         i2 = layerstack.index(layer)
         if i2 > i1:
-            return layer
+            return lpp
         else:
-            return self.layer
+            return self.lpp

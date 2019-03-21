@@ -362,7 +362,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         for shape in self._db['rect']:
             self.temp_boundary = self.temp_boundary.get_enclosure(shape)
             if shape.virtual is False:
-                TemplateBase.add_rect(self, shape.layer, shape.to_bbox())
+                TemplateBase.add_rect(self, shape.lpp, shape.to_bbox())
 
     def _commit_inst(self) -> None:
         """ Takes in all inst in the db and creates standard BAG equivalents """

@@ -182,7 +182,7 @@ class Via(VirtualObj):
     def __init__(self,
                  via_id: str,
                  bbox: Rectangle,
-                 size: Tuple[int, int] = (None, None),
+                 size: Tuple[int, int] = (1, 1),
                  ):
         """
         Creates a Via based on the overlap region between the two provided rectangles.

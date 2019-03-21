@@ -172,7 +172,7 @@ class EZRouter:
         # Otherwise add a new via with the calculated enclosure rules
         if layer != self.current_rect.layer:
             # Add a new primitive via at the current location
-            if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.layer:
+            if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
                 via_id = 'V' + layer + '_' + self.current_rect.layer
             else:
                 via_id = 'V' + self.current_rect.layer + '_' + layer
@@ -183,7 +183,7 @@ class EZRouter:
             if enc_style == 'asymm':
                 # Determine whether the current route segment is on bottom or top
                 # Allocate the default enc params to the corresponding layer
-                if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.layer:
+                if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
                     default_enc = self.config['V' + layer + '_' + self.current_rect.layer]
 
                     # Set the enclosure for the current route segment
