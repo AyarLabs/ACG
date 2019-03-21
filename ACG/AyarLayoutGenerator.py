@@ -16,7 +16,7 @@ from bag.layout.template import TemplateBase
 
 # ACG imports
 from ACG.Rectangle import Rectangle
-from ACG.Track import Track
+from ACG.Track import Track, TrackManager
 from ACG.VirtualInst import VirtualInst
 from ACG.Via import ViaStack, Via
 from ACG import tech as tech_info
@@ -45,6 +45,9 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
 
         # Create an empty database that will store only the relevant layout objects
         self.loc = {}
+
+        # Manage the tracks in a track manager
+        self.tracks = TrackManager.from_routing_grid(self.grid)
 
         # Pull default layout parameters
         self.params = self.__class__.get_default_param_values()
@@ -139,29 +142,33 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         self._db['rect'].append(temp)
         return self._db['rect'][-1]
 
-    @staticmethod
-    def add_track(dim,  # type: str
-                  spacing  # type: float
-                  ) -> Track:
+    def add_track(self, name: str, dim: str, spacing: float, origin: float = 0) -> Track:
         """
         Creates and returns a track object for alignment use
 
-        Args:
-            dim (str):
-                'x' for a horizontal track and 'y' for a vertical track
-            spacing (float):
-                number representing the space between tracks
+        Parameters
+        ----------
+        name
+            Name to use for the added track
+        dim:
+            'x' for a horizontal track and 'y' for a vertical track
+        spacing:
+            number representing the space between tracks
+        origin:
+            coordinate for the 0th track
 
-        Returns:
-            (Track):
-                track object for user manipulation
+        Returns
+        -------
+        Track:
+            track object for user manipulation
         """
-        return Track(dim, spacing)
+        self.tracks.add_track(name=name, dim=dim, spacing=spacing, origin=origin)
+        return self.tracks[name]
 
     def new_template(self,
-                     params=None,  # type: dict
+                     params: dict = None,
                      temp_cls=None,
-                     debug=False,  # type: bool
+                     debug: bool = False,
                      **kwargs):
         """
         Generates a layout master of specified class and parameter set

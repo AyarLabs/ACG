@@ -7,7 +7,8 @@ from typing import Tuple, Union, Optional, List
 
 class EZRouter:
     """
-    The EZRouter class provides a number of methods to automatically generate simple wire routes in ACG
+    The EZRouter class provides a number of methods to automatically generate simple wire routes in ACG. This class
+    does not require the use of tracks
     """
 
     def __init__(self,
@@ -574,6 +575,55 @@ class EZRouter:
                 else:
                     rect2.stretch('t', ref_rect=rect1, ref_handle='t')
         self.gen.connect_wires(rect1=rect1, rect2=rect2, size=via_size)
+
+    def _set_handle_from_dir(self, direction: str) -> None:
+        """ Determines the current rectangle handle based on the provided routing direction """
+        if direction == '+x':
+            self.current_handle = 'cr'
+        elif direction == '-x':
+            self.current_handle = 'cl'
+        elif direction == '+y':
+            self.current_handle = 'ct'
+        elif direction == '-y':
+            self.current_handle = 'cb'
+
+
+class TrackRouter(EZRouter):
+    """ This class enables similar functionality to EZRouter, but enforces tracks and routing direction """
+    def __init__(self,
+                 gen_cls: AyarLayoutGenerator,
+                 start_rect: Rectangle,
+                 start_direction: str,
+                 ):
+        """
+        Expects an ACG layout generator as input. This generator class has its shape creation methods called after the
+        route is completed
+
+        Parameters
+        ----------
+        gen_cls : AyarLayoutGenerator
+            Layout generator class that this Autorouter will be drawing in
+        start_rect : Rectangle
+            The rectangle we will be starting the route from
+        start_direction : str
+            '+x', '-x', '+y', '-y' for the direction the route will start from
+        """
+        EZRouter.__init__(self, gen_cls=gen_cls, start_rect=start_rect, start_direction=start_direction)
+        # Keep a datastructure with all track information
+        self.tracks = self.gen.tracks
+
+    def connect_to_track(self, layer, track):
+        """ Connects the current wire to the provided track number """
+        # TODO: Need to check that the provided layer goes in a different direction than the current layer...
+        if self.tracks[layer].dim == 'x':
+            stretch_opt = (True, False)
+        else:
+            stretch_opt = (False, True)
+        self.current_rect.stretch(self.current_handle, offset=self.tracks[layer](track), stretch_opt=stretch_opt)
+
+    def find_nearest_track(self, rect):
+        """ Returns the track and number closest to the provided rectangle """
+        pass
 
     def _set_handle_from_dir(self, direction: str) -> None:
         """ Determines the current rectangle handle based on the provided routing direction """

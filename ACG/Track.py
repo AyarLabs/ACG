@@ -1,4 +1,68 @@
 from ACG.XY import XY
+from typing import Dict, TYPE_CHECKING
+if TYPE_CHECKING:
+    from bag.layout.routing.grid import RoutingGrid
+
+
+class TrackManager:
+    """
+    A class that enables users to create tracks and use them as references for routing
+    """
+    def __init__(self):
+        self.tracks: Dict[Track] = {}
+
+    def __getitem__(self, item) -> 'Track':
+        """ Use dictionary syntax to access a specific track instance """
+        return self.tracks[item]
+
+    def __str__(self):
+        track_str = ""
+        for name, track in self.tracks.items():
+            track_str += str(name) + ' ' + str(track)
+        return track_str
+
+    @classmethod
+    def from_routing_grid(cls, grid: 'RoutingGrid'):
+        """
+        Generates a track manager object from the current grid
+
+        Parameters
+        ----------
+        grid
+            RoutingGrid object used as reference to build all of the desired tracks
+
+        Returns
+        -------
+        TrackManager
+            Generated TrackManager object from the provided RoutingGrid
+        """
+        track_manager = cls()
+        for layer_id in grid.sp_tracks:
+            name = grid.tech_info.get_layer_name(layer_id)
+            spacing = grid.sp_tracks[layer_id] * grid.resolution
+            dim = grid.dir_tracks[layer_id]
+            track_manager.add_track(name=name, dim=dim, spacing=spacing)
+        return track_manager
+
+    def add_track(self, name, dim, spacing, origin=0):
+        """
+        Adds a track to the database.
+
+        Parameters
+        ----------
+        name
+            name to associate with the added track
+        dim
+            'x' or 'y' for the desired routing direction
+        spacing
+            space between tracks
+        origin
+            coordinate to place the zero track
+        """
+        if name in self.tracks:
+            raise ValueError(f"Track {name} already exists in the db")
+        else:
+            self.tracks[name] = Track(dim=dim, spacing=spacing, origin=origin)
 
 
 class Track:
@@ -29,6 +93,9 @@ class Track:
     """ Magic Methods """
     def __call__(self, num):
         return self.get_track(num)
+
+    def __str__(self):
+        return f"Track:\n\tdim: {self.dim}\n\tspacing: {self.spacing}\n"
 
     """ Properties """
     @property
