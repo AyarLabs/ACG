@@ -13,7 +13,7 @@ class AyarDesignManager:
     more intuitive yaml file organization and handles the RoutingGrid in grid-free layouts
     """
 
-    def __init__(self, bprj, spec_file):
+    def __init__(self, bprj, spec_file, gds_layermap=''):
         self.prj = bprj
         self.tdb = None  # templateDB instance for layout creation
         self.impl_lib = None  # Virtuoso library where generated cells are stored
@@ -21,7 +21,7 @@ class AyarDesignManager:
         self.specs = read_yaml(spec_file)
 
         # Initialize self.tdb with appropriate templateDB instance
-        self.make_tdb()
+        self.make_tdb(gds_layermap)
 
     """
     GENERATION METHODS - call these methods to generate and simulate your designs
@@ -251,7 +251,7 @@ class AyarDesignManager:
     HELPER METHODS - These should not need to be called by any subclass or external routine
     """
 
-    def make_tdb(self):
+    def make_tdb(self, layermap=''):
         """
         Makes a new TemplateDB object. If no routing grid parameters are sent in, dummy parameters are used.
         """
@@ -263,4 +263,9 @@ class AyarDesignManager:
         widths = [0.1, 0.1, 0.1, 0.1, 0.2]
         bot_dir = 'y'
         routing_grid = RoutingGrid(self.prj.tech_info, layers, spaces, widths, bot_dir)
-        self.tdb = TemplateDB('template_libs.def', routing_grid, self.impl_lib, use_cybagoa=True, prj=self.prj)  # Store templateDB
+        self.tdb = TemplateDB('template_libs.def',
+                              routing_grid,
+                              self.impl_lib,
+                              use_cybagoa=True,
+                              prj=self.prj,
+                              gds_lay_file=layermap)
