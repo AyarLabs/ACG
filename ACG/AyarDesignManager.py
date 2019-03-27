@@ -256,12 +256,18 @@ class AyarDesignManager:
         Makes a new TemplateDB object. If no routing grid parameters are sent in, dummy parameters are used.
         """
         self.impl_lib = self.specs['impl_lib']
+        if 'routing_grid' in self.specs:
+            layers = self.specs['routing_grid']['layers']
+            spaces = self.specs['routing_grid']['spaces']
+            widths = self.specs['routing_grid']['widths']
+            bot_dir = self.specs['routing_grid']['bot_dir']
+        else:
+            # Use dummy routing grid settings
+            layers = [1, 2, 3, 4, 5]
+            spaces = [0.1, 0.1, 0.1, 0.1, 0.2]
+            widths = [0.1, 0.1, 0.1, 0.1, 0.2]
+            bot_dir = 'y'
 
-        # Default routing grid settings
-        layers = [1, 2, 3, 4, 5]
-        spaces = [0.1, 0.1, 0.1, 0.1, 0.2]
-        widths = [0.1, 0.1, 0.1, 0.1, 0.2]
-        bot_dir = 'y'
         routing_grid = RoutingGrid(self.prj.tech_info, layers, spaces, widths, bot_dir)
         self.tdb = TemplateDB('template_libs.def',
                               routing_grid,
