@@ -46,7 +46,6 @@ class ViaStack(VirtualObj):
         self.rect1 = rect1
         self.rect2 = rect2
         self.size = size
-        self.bot_dir = None  # Direction of the bottom metal layer in the stack. To be deprecated
         self.metal_pairs = []  # List containing all metal layers to be connected by vias
         self.extend = extend  # Flag for top-level bag code to extend enclosure beyond provided overlap
         self.loc = {
@@ -122,7 +121,7 @@ class ViaStack(VirtualObj):
             except KeyError:
                 raise ValueError('Could not complete via stack from {} to {}'.format(self.loc['top'].layer,
                                                                                      self.loc['bottom'].layer))
-            self.metal_pairs.append((bot_layer, top_layer))
+            self.metal_pairs.append((bot_layer, top_layer, self.dir[self.routing.index(bot_layer)]))
             if top_layer == self.loc['top'].layer:
                 # If we have made it from the bottom to the top of the via stack, break out of the loop
                 break

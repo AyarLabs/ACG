@@ -395,7 +395,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                                      bbox=via.loc['overlap'].to_bbox(),
                                      bot_layer=connection[0],
                                      top_layer=connection[1],
-                                     bot_dir=via.bot_dir,
+                                     bot_dir=connection[2],
                                      extend=via.extend)
         for via in self._db['prim_via']:
             TemplateBase.add_via_primitive(self,
