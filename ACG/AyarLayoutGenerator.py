@@ -91,9 +91,9 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
     """ DO NOT OVERRIDE """
 
     def add_rect(self,
-                 layer: Union[str, Tuple[str, str], List[str, str]],
+                 layer: Union[str, Tuple[str, str], List[str]],
                  xy=None,
-                 virtual=False  # type: bool
+                 virtual: bool = False
                  ) -> Rectangle:
         """
         Instantiates a rectangle, adds the Rectangle object to local db, and returns it for further user manipulation
