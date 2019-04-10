@@ -150,7 +150,7 @@ class ViaStack(VirtualObj):
         2) For size constraints, set the overlap region to fit the desired number of vias
         """
         # 1) Get tech info for the highest metal pair in the via stack
-        bot_layer, top_layer = self.metal_pairs[-1]
+        bot_layer, top_layer, _ = self.metal_pairs[-1]
         via_prop = self.vias['V' + bot_layer + '_' + top_layer]
 
         # 2) Compute overlap required to fit via of given size
