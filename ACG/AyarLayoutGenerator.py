@@ -118,7 +118,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         return self._db['rect'][-1]
 
     def copy_rect(self, rect,  # type: Rectangle
-                  layer=None,  # type: Union[str, [str, str]]
+                  layer=None,  # type: Union[str, Tuple[str, str]]
                   virtual=False  # type: bool
                   ) -> Rectangle:
         """
