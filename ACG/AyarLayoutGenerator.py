@@ -5,7 +5,7 @@ to describe layout generation scripts in the Python language and automate the la
 
 # General imports
 import abc
-from typing import Union, Tuple
+from typing import Union, Tuple, List
 import re
 import yaml
 import os
@@ -91,7 +91,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
     """ DO NOT OVERRIDE """
 
     def add_rect(self,
-                 layer,  # type: Union[str, [str, str]]
+                 layer: Union[str, Tuple[str, str], List[str, str]],
                  xy=None,
                  virtual=False  # type: bool
                  ) -> Rectangle:
