@@ -10,11 +10,13 @@ class EZRouter:
     The EZRouter class provides a number of methods to automatically generate simple wire routes in ACG. This class
     does not require the use of tracks
     """
+    valid_directions = ['+x', '-x', '+y', '-y']
+    valid_handles = ['cr', 'cl', 'cb', 'ct', 'll' 'ul', 'lr', 'ur']
 
     def __init__(self,
                  gen_cls: AyarLayoutGenerator,
-                 start_rect: Rectangle,
-                 start_direction: str,
+                 start_rect: Optional[Rectangle] = None,
+                 start_direction: Optional[str] = None,
                  config: Optional[dict] = None
                  ):
         """
@@ -39,14 +41,11 @@ class EZRouter:
         if config:
             self.config.update(config)  # Update the default settings with your own
 
-        # State variables for where the route will be going
-        self.current_rect = self.gen.copy_rect(start_rect, virtual=False)
-        self.current_dir = start_direction
-        self.current_handle: str = ''
-        self.layer = start_rect.layer
-
-        # Set the current rectangle handle based on the starting direction
-        self._set_handle_from_dir(direction=start_direction)
+        # Init core router state variables
+        self._current_dir = None
+        self._current_handle = None
+        self.layer = None
+        self.current_rect = None
 
         # Location dictionary to store the running components in the route
         self.loc = dict(
@@ -54,6 +53,59 @@ class EZRouter:
             rect_list=[self.current_rect],
             via_list=[],
         )
+
+        # If the user provided information for a new route, create one
+        if start_rect and start_direction:
+            self.new_route(start_rect=start_rect,
+                           start_direction=start_direction)
+
+    ''' Set up properties to perform run-time checking on router state variables '''
+
+    @property
+    def current_dir(self) -> str:
+        return self._current_dir
+
+    @current_dir.setter
+    def current_dir(self, value: str):
+        if value in EZRouter.valid_directions:
+            self._current_dir = value
+        else:
+            raise ValueError(f'direction {value} is not valid')
+
+    @property
+    def current_handle(self) -> str:
+        return self._current_handle
+
+    @current_handle.setter
+    def current_handle(self, value: str):
+        if value in EZRouter.valid_handles:
+            self._current_handle = value
+        else:
+            raise ValueError(f'handle {value} is not valid')
+
+    def new_route(self, start_rect: Rectangle, start_direction: str) -> 'EZRouter':
+        """
+        Sets up the state variables to create a route paths. Requires a starting rectangle
+        and starting routing direction.
+
+        Parameters
+        ----------
+        start_rect : Rectangle
+            The rectangle we will be starting the route from
+        start_direction : str
+            '+x', '-x', '+y', '-y' for the direction the route will start from
+
+        Returns
+        -------
+        self : EZRouter
+            Return self to make it easy to cascade connections
+        """
+        # State variables for where the route will be going
+        self.current_rect = self.gen.copy_rect(start_rect, virtual=False)
+        self.current_dir = start_direction
+        self.layer = start_rect.layer
+        self._set_handle_from_dir(direction=start_direction)
+        return self
 
     def draw_straight_route(self,
                             loc: Union[Tuple[float, float], XY],
@@ -75,9 +127,12 @@ class EZRouter:
 
         Returns
         -------
-        self : AutoRouter
+        self : EZRouter
             Return self to make it easy to cascade connections
         """
+        if not self.current_rect or not self.current_handle or not self.current_dir:
+            raise ValueError('Router has not been initialized, please call new_route()')
+
         # Make a new rectangle and align it to the current route location
         new_rect = self.gen.add_rect(layer=self.current_rect.layer)
 
@@ -148,6 +203,9 @@ class EZRouter:
         self : AutoRouter
             Return self to make it easy to cascade connections
         """
+        if not self.current_rect or not self.current_handle or not self.current_dir:
+            raise ValueError('Router has not been initialized, please call new_route()')
+
         # Create the new rectangle and align it to the end of the route
         new_rect = self.gen.add_rect(layer=layer)
         new_rect.align(target_handle='c',
@@ -246,7 +304,6 @@ class EZRouter:
                      layer: Optional[Union[str, Tuple[str, str]]] = None,
                      enc_bot: Optional[List[float]] = None,
                      enc_top: Optional[List[float]] = None,
-                     omit_final_segment: bool = False
                      ) -> 'EZRouter':
         """
         Draws an L-route from the current location to the provided location while minimizing
@@ -270,14 +327,15 @@ class EZRouter:
             If provided, will use these enclosure settings for the bottom layer of the via
         enc_top : Optional[List[float]]
             If provided, will use these enclosure settings for the top layer of the via
-        omit_final_segment : bool
-            If true, will not draw the final straight route. This is useful when cascading l-routes
 
         Returns
         -------
         self : AutoRouter
             Return self to make it easy to cascade connections
         """
+        if not self.current_rect or not self.current_handle or not self.current_dir:
+            raise ValueError('Router has not been initialized, please call new_route()')
+
         # Draw the first straight route segment
         self.draw_straight_route(loc=loc, width=in_width)
 
@@ -310,8 +368,7 @@ class EZRouter:
                       enc_bot=enc_bot)
 
         # Draw the final straight route segment
-        if not omit_final_segment:
-            self.draw_straight_route(loc=loc)
+        self.draw_straight_route(loc=loc, width=out_width)
 
         return self
 
@@ -346,6 +403,9 @@ class EZRouter:
         self : WgRouter
             returns itself so that route segments can be easily chained together
         """
+        if not self.current_rect or not self.current_handle or not self.current_dir:
+            raise ValueError('Router has not been initialized, please call new_route()')
+
         current_dir = self.current_dir
         current_point = (self.current_rect[self.current_handle].xy, self.current_rect.layer)
 
@@ -379,8 +439,8 @@ class EZRouter:
                                  enc_style='uniform')
 
     def _draw_route_segment(self,
-                            pt0: Union[Tuple[float, float], XY],
-                            pt1: Optional[Union[Tuple[float, float], XY]],
+                            pt0: Tuple[Union[Tuple[float, float], XY], str],
+                            pt1: Optional[Tuple[Union[Tuple[float, float], XY], str]],
                             enc_style: str = 'uniform',
                             in_width: Optional[float] = None,
                             out_width: Optional[float] = None,
@@ -414,6 +474,9 @@ class EZRouter:
         self : AutoRouter
             Return self to make it easy to cascade connections
         """
+        if not self.current_rect or not self.current_handle or not self.current_dir:
+            raise ValueError('Router has not been initialized, please call new_route()')
+
         # Draw the first straight route segment
         self.draw_straight_route(loc=pt0[0], width=in_width)
 
@@ -575,55 +638,6 @@ class EZRouter:
                 else:
                     rect2.stretch('t', ref_rect=rect1, ref_handle='t')
         self.gen.connect_wires(rect1=rect1, rect2=rect2, size=via_size)
-
-    def _set_handle_from_dir(self, direction: str) -> None:
-        """ Determines the current rectangle handle based on the provided routing direction """
-        if direction == '+x':
-            self.current_handle = 'cr'
-        elif direction == '-x':
-            self.current_handle = 'cl'
-        elif direction == '+y':
-            self.current_handle = 'ct'
-        elif direction == '-y':
-            self.current_handle = 'cb'
-
-
-class TrackRouter(EZRouter):
-    """ This class enables similar functionality to EZRouter, but enforces tracks and routing direction """
-    def __init__(self,
-                 gen_cls: AyarLayoutGenerator,
-                 start_rect: Rectangle,
-                 start_direction: str,
-                 ):
-        """
-        Expects an ACG layout generator as input. This generator class has its shape creation methods called after the
-        route is completed
-
-        Parameters
-        ----------
-        gen_cls : AyarLayoutGenerator
-            Layout generator class that this Autorouter will be drawing in
-        start_rect : Rectangle
-            The rectangle we will be starting the route from
-        start_direction : str
-            '+x', '-x', '+y', '-y' for the direction the route will start from
-        """
-        EZRouter.__init__(self, gen_cls=gen_cls, start_rect=start_rect, start_direction=start_direction)
-        # Keep a datastructure with all track information
-        self.tracks = self.gen.tracks
-
-    def connect_to_track(self, layer, track):
-        """ Connects the current wire to the provided track number """
-        # TODO: Need to check that the provided layer goes in a different direction than the current layer...
-        if self.tracks[layer].dim == 'x':
-            stretch_opt = (True, False)
-        else:
-            stretch_opt = (False, True)
-        self.current_rect.stretch(self.current_handle, offset=self.tracks[layer](track), stretch_opt=stretch_opt)
-
-    def find_nearest_track(self, rect):
-        """ Returns the track and number closest to the provided rectangle """
-        pass
 
     def _set_handle_from_dir(self, direction: str) -> None:
         """ Determines the current rectangle handle based on the provided routing direction """
