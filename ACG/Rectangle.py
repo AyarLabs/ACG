@@ -29,7 +29,7 @@ class Rectangle(VirtualObj):
         self._ll = None
         self._ur = None
         self._res = .001
-        self._lpp: Tuple[str, str] = None
+        self._lpp: Optional[Tuple[str, str]] = None
 
         # Init local variables
         self.xy = xy  # property setter creates ll and ur coordinates
@@ -490,3 +490,16 @@ class Rectangle(VirtualObj):
             return lpp
         else:
             return self.lpp
+
+    def get_midpoint(self,
+                     handle: str,
+                     coord: coord_type
+                     ) -> coord_type:
+        """
+        Gets the midpoint between a location on this rectangle and another coordinate
+        """
+        my_loc = self.loc[handle]
+        their_loc = XY(coord)
+        mid_x = (my_loc.x + their_loc.x) / 2
+        mid_y = (my_loc.y + their_loc.y) / 2
+        return XY([mid_x, mid_y])

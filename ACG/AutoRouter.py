@@ -2,7 +2,7 @@ from .AyarLayoutGenerator import AyarLayoutGenerator
 from .Rectangle import Rectangle
 from .XY import XY
 from .tech import tech_info
-from typing import Tuple, Union, Optional, List
+from typing import Tuple, Union, Optional, List, Dict
 
 
 class EZRouter:
@@ -31,7 +31,7 @@ class EZRouter:
             The rectangle we will be starting the route from
         start_direction : str
             '+x', '-x', '+y', '-y' for the direction the route will start from
-        config : dict
+        config : Optional[dict]
             dictionary of configuration variables that will set router defaults
         """
         # Init generator and tech information
@@ -83,7 +83,10 @@ class EZRouter:
         else:
             raise ValueError(f'handle {value} is not valid')
 
-    def new_route(self, start_rect: Rectangle, start_direction: str) -> 'EZRouter':
+    def new_route(self,
+                  start_rect: Rectangle,
+                  start_direction: str,
+                  ) -> 'EZRouter':
         """
         Sets up the state variables to create a route paths. Requires a starting rectangle
         and starting routing direction.
@@ -105,6 +108,56 @@ class EZRouter:
         self.current_dir = start_direction
         self.layer = start_rect.layer
         self._set_handle_from_dir(direction=start_direction)
+        return self
+
+    def new_route_from_location(self,
+                                start_loc: Union[Tuple[float, float], XY],
+                                start_direction: str,
+                                start_layer: Union[str, Tuple[str, str]],
+                                width: float,
+                                length: Optional[float] = None,
+                                ) -> 'EZRouter':
+        """
+        This method enables you to start a route from an arbitrary location with the specified wire layer,
+        width, and length. If a length is not provided, it will use the minimium grid resolution to minimize
+        the chance of DRC issues
+
+        Parameters
+        ----------
+        start_loc :
+            location where the new route will start
+        start_direction : str
+            direction where this route will point
+        start_layer : str
+            layer where the first route segment will be placed
+        width : float
+            width of the new path
+        length : Optional[float]
+            If a length is provided, the new route segment will be extended in the direction opposite to the
+            current routing direction
+
+        Returns
+        -------
+        self : EZRouter
+            Return self to make it easy to cascade connections
+        """
+        self.current_dir = start_direction
+        self._set_handle_from_dir(direction=start_direction)
+        self.current_rect = self.gen.add_rect(layer=start_layer)
+        self.layer = self.current_rect.layer
+        if self.current_dir == '+x' or self.current_dir == '-x':
+            self.current_rect.set_dim('y', width)
+            if not length:
+                self.current_rect.set_dim('x', self.gen.grid.resolution * 2)
+            else:
+                self.current_rect.set_dim('x', length)
+        else:
+            self.current_rect.set_dim('x', width)
+            if not length:
+                self.current_rect.set_dim('y', self.gen.grid.resolution * 2)
+            else:
+                self.current_rect.set_dim('y', length)
+        self.current_rect.align(self.current_handle, offset=start_loc)
         return self
 
     def draw_straight_route(self,
