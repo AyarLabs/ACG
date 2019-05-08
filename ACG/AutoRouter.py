@@ -108,6 +108,14 @@ class EZRouter:
         self.current_dir = start_direction
         self.layer = start_rect.layer
         self._set_handle_from_dir(direction=start_direction)
+
+        # Reset location dict
+        self.loc = dict(
+            route_list=[self.current_rect],
+            rect_list=[self.current_rect],
+            via_list=[],
+        )
+
         return self
 
     def new_route_from_location(self,
@@ -212,6 +220,7 @@ class EZRouter:
                 new_rect.align('ct', ref_rect=self.current_rect, ref_handle=self.current_handle)
 
         # Update the current rectangle pointer and stretch it to the desired location
+        self.loc['rect_list'].append(new_rect)
         self.current_rect = new_rect
         self.current_rect.stretch(target_handle=self.current_handle,
                                   offset=loc,
@@ -343,6 +352,7 @@ class EZRouter:
                 via.set_enclosure(enc_top=enc_top)
 
         # Update the pointers for the current rect, handle, and direction
+        self.loc['rect_list'].append(new_rect)
         self.current_rect = new_rect
         self.current_dir = direction
         self._set_handle_from_dir(direction)
