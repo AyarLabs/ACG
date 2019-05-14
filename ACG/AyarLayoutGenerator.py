@@ -191,11 +191,6 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                      inst_name=None,
                      loc=(0, 0),
                      orient="R0",
-                     nx=1,
-                     ny=1,
-                     spx=0,
-                     spy=0,
-                     unit_mode=False
                      ) -> VirtualInst:
         """ Adds a single instance from a provided template master """
         temp = VirtualInst(master, inst_name=inst_name)
