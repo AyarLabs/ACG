@@ -5,4 +5,6 @@ to make it easy to create highly customized layout generators that may not be po
 requirement to make algorithms technology agnostic. In addition, we make it easy to combine legacy hand-drawn
 layouts and IP together with new layout generators.
 
+In the future, we plan on extend ACG to enable quick auto-routing.
+
 NOTE: ACG is currently in development, and is being slowly cleaned up for open-source consumption, use at your own risk!
