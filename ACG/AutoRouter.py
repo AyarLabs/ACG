@@ -289,67 +289,76 @@ class EZRouter:
         else:
             new_rect.set_dim('x', out_width)
 
-        # If the provided layer is the same as the current layer, turn the route
-        # Otherwise add a new via with the calculated enclosure rules
-        if layer != self.current_rect.layer:
-            # Add a new primitive via at the current location
-            if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
-                via_id = 'V' + layer + '_' + self.current_rect.layer
-            else:
-                via_id = 'V' + self.current_rect.layer + '_' + layer
-            via = self.gen.add_prim_via(via_id=via_id, rect=new_rect)
+        if self.current_dir[1] == 'x' and direction[1] == 'x':
+            new_rect.set_dim('x', self.current_rect.get_dim('y'))
 
-            # If we use asymmetric via enclosures, figure out which directions should
-            # have what enclosure size
-            if enc_style == 'asymm':
-                # Determine whether the current route segment is on bottom or top
-                # Allocate the default enc params to the corresponding layer
-                if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
-                    default_enc = self.config['V' + layer + '_' + self.current_rect.layer]
+        elif self.current_dir[1] == direction[1] == 'y':
+            new_rect.set_dim('y', self.current_rect.get_dim('x'))
 
-                    # Set the enclosure for the current route segment
-                    enc_large = default_enc['asymm_enclosure_large']
-                    enc_small = default_enc['asymm_enclosure_small']
-                    if self.current_dir == '+x' or self.current_dir == '-x':
-                        via.set_enclosure(enc_top=[enc_large, enc_large, enc_small, enc_small])
-                    else:
-                        via.set_enclosure(enc_top=[enc_small, enc_small, enc_large, enc_large])
+        new_rect_2 = self.gen.copy_rect(new_rect, layer=self.current_rect.layer)
+        self.gen.connect_wires(new_rect, new_rect_2)
 
-                    # Set the enclosure for the next route segment
-                    enc_large = default_enc['asymm_enclosure_large']
-                    enc_small = default_enc['asymm_enclosure_small']
-                    if direction == '+x' or direction == '-x':
-                        via.set_enclosure(enc_bot=[enc_large, enc_large, enc_small, enc_small])
-                    else:
-                        via.set_enclosure(enc_bot=[enc_small, enc_small, enc_large, enc_large])
-                else:
-                    default_enc = self.config['V' + self.current_rect.layer + '_' + layer]
-
-                    # Set the enclosure for the current route segment
-                    enc_large = default_enc['asymm_enclosure_large']
-                    enc_small = default_enc['asymm_enclosure_small']
-                    if self.current_dir == '+x' or self.current_dir == '-x':
-                        via.set_enclosure(enc_bot=[enc_large, enc_large, enc_small, enc_small])
-                    else:
-                        via.set_enclosure(enc_bot=[enc_small, enc_small, enc_large, enc_large])
-
-                    # Set the enclosure for the next route segment
-                    enc_large = default_enc['asymm_enclosure_large']
-                    enc_small = default_enc['asymm_enclosure_small']
-                    if direction == '+x' or direction == '-x':
-                        via.set_enclosure(enc_top=[enc_large, enc_large, enc_small, enc_small])
-                    else:
-                        via.set_enclosure(enc_top=[enc_small, enc_small, enc_large, enc_large])
-
-            # Set via parameters
-            if size is not None:
-                via.size = size
-            else:
-                via.size = self.config[via_id]['size']
-            if enc_bot is not None:
-                via.set_enclosure(enc_bot=enc_bot)
-            if enc_top is not None:
-                via.set_enclosure(enc_top=enc_top)
+        # # If the provided layer is the same as the current layer, turn the route
+        # # Otherwise add a new via with the calculated enclosure rules
+        # if layer != self.current_rect.layer:
+        #     # Add a new primitive via at the current location
+        #     if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
+        #         via_id = 'V' + layer + '_' + self.current_rect.layer
+        #     else:
+        #         via_id = 'V' + self.current_rect.layer + '_' + layer
+        #     via = self.gen.add_prim_via(via_id=via_id, rect=new_rect)
+        #
+        #     # If we use asymmetric via enclosures, figure out which directions should
+        #     # have what enclosure size
+        #     if enc_style == 'asymm':
+        #         # Determine whether the current route segment is on bottom or top
+        #         # Allocate the default enc params to the corresponding layer
+        #         if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
+        #             default_enc = self.config['V' + layer + '_' + self.current_rect.layer]
+        #
+        #             # Set the enclosure for the current route segment
+        #             enc_large = default_enc['asymm_enclosure_large']
+        #             enc_small = default_enc['asymm_enclosure_small']
+        #             if self.current_dir == '+x' or self.current_dir == '-x':
+        #                 via.set_enclosure(enc_top=[enc_large, enc_large, enc_small, enc_small])
+        #             else:
+        #                 via.set_enclosure(enc_top=[enc_small, enc_small, enc_large, enc_large])
+        #
+        #             # Set the enclosure for the next route segment
+        #             enc_large = default_enc['asymm_enclosure_large']
+        #             enc_small = default_enc['asymm_enclosure_small']
+        #             if direction == '+x' or direction == '-x':
+        #                 via.set_enclosure(enc_bot=[enc_large, enc_large, enc_small, enc_small])
+        #             else:
+        #                 via.set_enclosure(enc_bot=[enc_small, enc_small, enc_large, enc_large])
+        #         else:
+        #             default_enc = self.config['V' + self.current_rect.layer + '_' + layer]
+        #
+        #             # Set the enclosure for the current route segment
+        #             enc_large = default_enc['asymm_enclosure_large']
+        #             enc_small = default_enc['asymm_enclosure_small']
+        #             if self.current_dir == '+x' or self.current_dir == '-x':
+        #                 via.set_enclosure(enc_bot=[enc_large, enc_large, enc_small, enc_small])
+        #             else:
+        #                 via.set_enclosure(enc_bot=[enc_small, enc_small, enc_large, enc_large])
+        #
+        #             # Set the enclosure for the next route segment
+        #             enc_large = default_enc['asymm_enclosure_large']
+        #             enc_small = default_enc['asymm_enclosure_small']
+        #             if direction == '+x' or direction == '-x':
+        #                 via.set_enclosure(enc_top=[enc_large, enc_large, enc_small, enc_small])
+        #             else:
+        #                 via.set_enclosure(enc_top=[enc_small, enc_small, enc_large, enc_large])
+        #
+        #     # Set via parameters
+        #     if size is not None:
+        #         via.size = size
+        #     else:
+        #         via.size = self.config[via_id]['size']
+        #     if enc_bot is not None:
+        #         via.set_enclosure(enc_bot=enc_bot)
+        #     if enc_top is not None:
+        #         via.set_enclosure(enc_top=enc_top)
 
         # Update the pointers for the current rect, handle, and direction
         self.loc['rect_list'].append(new_rect)
@@ -481,8 +490,24 @@ class EZRouter:
         manh_point_list = self.manhattanize_point_list(initial_direction=current_dir,
                                                        initial_point=current_point,
                                                        points=points)
+        # print (manh_point_list)
+        del_idx = []
+        for i in range(len(manh_point_list) - 2):
+            pt0 = manh_point_list[i]
+            pt1 = manh_point_list[i + 1]
+            pt2 = manh_point_list[i + 2]
+
+            if pt0[0][0] == pt1[0][0] == pt2[0][0] and (pt0[0][1] <= pt1[0][1] <= pt2[0][1] or pt0[0][1] >= pt1[0][1]
+                                                        >= pt2[0][1]) and pt0[1] == pt1[1] == pt2[1]:
+                del_idx.append(i + 1)
+            elif pt0[0][1] == pt1[0][1] == pt2[0][1] and (pt0[0][0] <= pt1[0][0] <= pt2[0][0] or pt0[0][0] >= pt1[0][0]
+                                                          >= pt2[0][0]) and pt0[1] == pt1[1] == pt2[1]:
+                del_idx.append(i + 1)
+
+        final_point_list = [manh_point_list[i] for i in range(len(manh_point_list)) if i not in del_idx]
+
         # Simplify the point list so that each point corresponds with a bend of the route, i.e. no co-linear points
-        final_point_list = manh_point_list
+        # final_point_list = manh_point_list
         final_point_list = final_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
 
         # Draw a series of L-routes to follow the final simplified point list
@@ -557,11 +582,15 @@ class EZRouter:
             if self.current_dir == '+x' or self.current_dir == '-x':
                 if self.current_rect[self.current_handle].y < XY(pt1[0]).y:
                     direction = '+y'
+                elif self.current_rect[self.current_handle].y == XY(pt1[0]).y:
+                    direction = self.current_dir
                 else:
                     direction = '-y'
             else:
                 if self.current_rect[self.current_handle].x < XY(pt1[0]).x:
                     direction = '+x'
+                elif self.current_rect[self.current_handle].x == XY(pt1[0]).x:
+                    direction = self.current_dir
                 else:
                     direction = '-x'
         # If no next point is provided because it is at the end of the route, just use the
