@@ -503,3 +503,15 @@ class Rectangle(VirtualObj):
         mid_x = (my_loc.x + their_loc.x) / 2
         mid_y = (my_loc.y + their_loc.y) / 2
         return XY([mid_x, mid_y])
+
+    @staticmethod
+    def overlap(A, B):
+        """
+        Returns whether or not two rectangles overlap in both dimensions
+        """
+        x_min = max(A.ll.x, B.ll.x)
+        x_max = min(A.ur.x, B.ur.x)
+        y_min = max(A.ll.y, B.ll.y)
+        y_max = min(A.ur.y, B.ur.y)
+
+        return x_min < x_max and y_min < y_max
