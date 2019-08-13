@@ -3,12 +3,15 @@ from .Rectangle import Rectangle
 from .XY import XY
 from typing import Tuple, Union, Optional, List, Dict
 from .AutoRouter import EZRouter
+import heapq
 
 
 class EZRouterShield(EZRouter):
     """
     The EZRouterShield class inherits from the EZRouter class and allows you to create ground-shielded routes.
     """
+
+    # TODO: change tuples to XY to avoid rounding issues. Using XY creates key errors with self.route_point_dict.
 
     def __init__(self,
                  gen_cls: AyarLayoutGenerator,
@@ -434,3 +437,104 @@ class EZRouterShield(EZRouter):
             sign = -sign
 
         return self
+
+    def AStarRouter(self,
+                    start : Union[Tuple[float, float], XY],
+                    end : Union[Tuple[float, float], XY],
+                    obstructions : List[Rectangle],
+                    layer : str,
+                    width : float
+                    ):
+
+        all_points = [start, end]
+
+        for rectangle in obstructions:
+            all_points.append(rectangle.ll)
+            all_points.append(rectangle.ur)
+            all_points.append(XY((rectangle.ll.x, rectangle.ur.y)))
+            all_points.append(XY((rectangle.ur.x, rectangle.ll.y)))
+
+        all_points = set(all_points)
+
+        adj_mtx = {point: [] for point in all_points}
+
+        for pointA in all_points:
+            for pointB in all_points:
+                if pointA != pointB and self.visible(pointA, pointB, obstructions) and pointA not in adj_mtx[pointB]:
+                    adj_mtx[pointA].append(pointB)
+                    adj_mtx[pointB].append(pointA)
+
+        h = []
+
+        curr_point = start
+
+        edgeTo = {start: None}
+        distTo = {start: 0}
+
+        i = 0
+
+        while curr_point != end:
+            i += 1
+            for adj_point in adj_mtx[curr_point]:
+                heuristic = self.L1_dist(adj_point, end) + distTo[curr_point] + self.L1_dist(adj_point, curr_point)
+                if adj_point not in distTo and adj_point != curr_point:
+                    heapq.heappush(h, (float(heuristic), adj_point))
+                    distTo[adj_point] = distTo[curr_point] + self.L1_dist(adj_point, curr_point)
+                    edgeTo[adj_point] = curr_point
+
+            if not h:
+                raise RuntimeError("The provided endpoint is unreachable with the given obstructions")
+            curr_point = heapq.heappop(h)[1]
+
+        path = [curr_point]
+
+        while curr_point != start:
+            curr_point = edgeTo[curr_point]
+            path.append(curr_point)
+
+        path = path[::-1]
+
+        offs = (path[1].x - path[0].x, path[1].y - path[0].y)
+
+        if offs[0] > 0:
+            start_dir = '+x'
+        elif offs[0] < 0:
+            start_dir = '-x'
+        elif offs[1] > 0:
+            start_dir = '+y'
+        else:
+            start_dir = '-y'
+
+        self.new_route_from_location(start, start_dir, layer, width)
+        self.route_point_dict[(start.x, start.y)] = width
+
+        self.add_route_points(path[1:], layer)
+        self.cardinal_router()
+
+    def visible(self,
+                A : XY,
+                B : XY,
+                rects : List[Rectangle]
+                ):
+        if A.x >= B.x and A.y >= B.y:
+            ur = A
+            ll = B
+        elif A.x <= B.x and A.y <= B.y:
+            ur = B
+            ll = A
+        elif A.x <= B.x and A.y >= B.y:
+            ur = XY((B.x, A.y))
+            ll = XY((A.x, B.y))
+        else:
+            ll = XY((B.x, A.y))
+            ur = XY((A.x, B.y))
+        for rect in rects:
+            if Rectangle.overlap(rect, Rectangle((ll, ur), '')):
+                return False
+        return True
+
+    def L1_dist(self,
+                pt1 : XY,
+                pt2 : XY
+                ):
+        return abs(pt2.y - pt1.y) + abs(pt2.x - pt1.x)
