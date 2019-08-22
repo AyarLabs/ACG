@@ -7,9 +7,9 @@ from .AutoRouter import EZRouter
 import copy
 
 
-class EZRouterShield(EZRouter):
+class EZRouterExtension(EZRouter):
     """
-    The EZRouterShield class inherits from the EZRouter class and allows you to create ground-shielded routes.
+    The EZRouterExtension class inherits from the EZRouter class and allows you to create ground-shielded routes.
     """
 
     # TODO: change tuples to XY to avoid rounding issues. Right now, using XY creates key errors with self.route_point_dict.
