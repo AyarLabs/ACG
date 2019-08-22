@@ -206,7 +206,7 @@ class EZRouter:
             else:
                 self.current_rect.set_dim('y', length)
         self.current_rect.align(self.current_handle, offset=start_loc)
-        self.route_point_dict[start_loc] = width
+        self.route_point_dict[(round(start_loc[0], 3), round(start_loc[1], 3))] = width
         return self
 
     def draw_straight_route(self,
@@ -494,7 +494,8 @@ class EZRouter:
     def add_route_points(self,
                          points: List[Tuple],
                          layer: str,
-                         width: Optional[float] = None
+                         width: Optional[float] = None,
+                         add_width: bool = True
                          ):
         """
         Adds provided points to route network.
@@ -516,7 +517,8 @@ class EZRouter:
         for point in points:
             p = (round(point[0], 3), round(point[1], 3))
             self.route_points.append((p, layer))
-            self.route_point_dict[p] = width
+            if add_width:
+                self.route_point_dict[p] = width
 
     def cardinal_helper(self, router_temp, manh, start_pt, start_dir, start_layer, offset, dirs=None, start=None):
         """
@@ -592,7 +594,8 @@ class EZRouter:
                         points: List[Tuple] = None,
                         relative_coords: bool = False,
                         enc_style: str = 'uniform',
-                        prim: bool = True
+                        prim: bool = True,
+                        clear_route: bool = True
                         ):
         """
         Creates a route network that contains all provided points. Any required vias use the user provided
@@ -615,6 +618,10 @@ class EZRouter:
             False if the list of coordinates are absolute relative to the current Template's origin
         enc_style : str
             Via enclosure style to use
+        prim : bool
+            True to use primitive vias
+        clear_route : bool
+            True to clear self.route_point_dict and self.route_points in order to instantiate another route
 
         Returns
         -------
@@ -626,6 +633,9 @@ class EZRouter:
 
         if not points:
             points = self.route_points
+        else:
+            for point in points:
+                self.route_point_dict[tuple(point[0])] = self.config[point[1]]['width']
 
         current_dir = self.current_dir
         current_point = (self.current_rect[self.current_handle].xy, self.current_rect.layer)
@@ -666,6 +676,11 @@ class EZRouter:
                                  out_width=self.route_point_dict[final_point_list[-1][0]],
                                  enc_style='uniform',
                                  prim=prim)
+
+        # Clear instance variables for future routes
+        if clear_route:
+            self.route_points = []
+            self.route_point_dict = {}
 
     def _draw_route_segment(self,
                             pt0: Tuple[Union[Tuple[float, float], XY], str],
@@ -726,15 +741,19 @@ class EZRouter:
             if self.current_dir == '+x' or self.current_dir == '-x':
                 if self.current_rect[self.current_handle].y < XY(pt1[0]).y:
                     direction = '+y'
+                elif self.current_rect[self.current_handle].y == XY(pt1[0]).y and self.current_rect[self.current_handle].x < XY(pt1[0]).x:
+                    direction = '+x'
                 elif self.current_rect[self.current_handle].y == XY(pt1[0]).y:
-                    direction = self.current_dir
+                    direction = '-x'
                 else:
                     direction = '-y'
             else:
                 if self.current_rect[self.current_handle].x < XY(pt1[0]).x:
                     direction = '+x'
+                elif self.current_rect[self.current_handle].x == XY(pt1[0]).x and self.current_rect[self.current_handle].y < XY(pt1[0]).y:
+                    direction = '+y'
                 elif self.current_rect[self.current_handle].x == XY(pt1[0]).x:
-                    direction = self.current_dir
+                    direction = '-y'
                 else:
                     direction = '-x'
         # If no next point is provided because it is at the end of the route, just use the
@@ -804,7 +823,7 @@ class EZRouter:
                     current_point = manh_point_list[-1]
                     current_dir = 'x'
             # If the point does not move ignore it to avoid adding co-linear points
-            elif dx == 0 and dy == 0:
+            elif dx == 0 and dy == 0 and next_point[1] == current_point[1]:
                 continue
             # If the next point only changes in one direction and it is not co-linear
             else:
