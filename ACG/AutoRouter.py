@@ -54,6 +54,37 @@ class EZRouter:
             via_list=[],
         )
 
+        self.route_points = []
+        self.route_point_dict = {}
+
+        # to determine offset of shield_1 from center
+        self.shield_dict = {
+            '+x': {
+                '+x': (0, 1),
+                '-x': (0, 1),
+                '+y': (-1, 1),
+                '-y': (1, 1)
+            },
+            '-x': {
+                '+x': (0, -1),
+                '-x': (0, -1),
+                '+y': (-1, -1),
+                '-y': (1, -1)
+            },
+            '+y': {
+                '+x': (-1, 1),
+                '-x': (-1, -1),
+                '+y': (-1, 0),
+                '-y': (-1, 0)
+            },
+            '-y': {
+                '+x': (1, 1),
+                '-x': (1, -1),
+                '+y': (1, 0),
+                '-y': (1, 0)
+            }
+        }
+
         # If the user provided information for a new route, create one
         if start_rect and start_direction:
             self.new_route(start_rect=start_rect,
@@ -108,6 +139,14 @@ class EZRouter:
         self.current_dir = start_direction
         self.layer = start_rect.layer
         self._set_handle_from_dir(direction=start_direction)
+
+        if start_direction[1] == 'x':
+            width = start_rect.ur.y - start_rect.ll.y
+        elif start_direction[1] == 'y':
+            width = start_rect.ur.x - start_rect.ll.x
+
+        current_point = tuple(self.current_rect[self.current_handle].xy)
+        self.route_point_dict[current_point] = width
 
         # Reset location dict
         self.loc = dict(
@@ -166,6 +205,7 @@ class EZRouter:
             else:
                 self.current_rect.set_dim('y', length)
         self.current_rect.align(self.current_handle, offset=start_loc)
+        self.route_point_dict[(round(start_loc[0], 3), round(start_loc[1], 3))] = width
         return self
 
     def draw_straight_route(self,
@@ -235,6 +275,7 @@ class EZRouter:
                  size: Optional[Tuple[int, int]] = None,
                  enc_bot: Optional[List[float]] = None,
                  enc_top: Optional[List[float]] = None,
+                 prim: bool = True
                  ) -> 'EZRouter':
         """
         This method adds a via at the current location to the user provided layer. Cannot
@@ -259,6 +300,8 @@ class EZRouter:
             enclosure size of the left, right, top, bot edges of the bottom layer of the via
         enc_top : List[float]
             enclosure size of the left, right, top, bot edges of the top layer of the via
+        prim : bool
+            True to use primitive vias, else False
 
         Returns
         -------
@@ -289,9 +332,15 @@ class EZRouter:
         else:
             new_rect.set_dim('x', out_width)
 
+        if self.current_dir[1] == 'x' and direction[1] == 'x':
+            new_rect.set_dim('x', self.current_rect.get_dim('y'))
+
+        elif self.current_dir[1] == direction[1] == 'y':
+            new_rect.set_dim('y', self.current_rect.get_dim('x'))
+
         # If the provided layer is the same as the current layer, turn the route
         # Otherwise add a new via with the calculated enclosure rules
-        if layer != self.current_rect.layer:
+        if prim and layer != self.current_rect.layer:
             # Add a new primitive via at the current location
             if self.current_rect.get_highest_layer(layer=layer) == self.current_rect.lpp:
                 via_id = 'V' + layer + '_' + self.current_rect.layer
@@ -350,6 +399,10 @@ class EZRouter:
                 via.set_enclosure(enc_bot=enc_bot)
             if enc_top is not None:
                 via.set_enclosure(enc_top=enc_top)
+
+        if not prim:
+            new_rect_2 = self.gen.copy_rect(new_rect, layer=self.current_rect.layer)
+            self.gen.connect_wires(new_rect, new_rect_2)
 
         # Update the pointers for the current rect, handle, and direction
         self.loc['rect_list'].append(new_rect)
@@ -437,9 +490,111 @@ class EZRouter:
 
     ''' Automatic routing methods '''
 
+    def add_route_points(self,
+                         points: List[Tuple],
+                         layer: str,
+                         width: Optional[float] = None,
+                         add_width: bool = True
+                         ):
+        """
+        Adds provided points to route network.
+
+        Notes
+        -----
+        * Stores width for each point in self.route_point_dict
+        * No need to add start point of route network
+
+        Parameters
+        ----------
+        points : str
+            A list of Tuple[float, float] or XY
+        layer : str
+            The layer on which to route the given points
+        width : float
+            The width of the route at the given points
+        """
+        for point in points:
+            p = (round(point[0], 3), round(point[1], 3))
+            self.route_points.append((p, layer))
+            if add_width:
+                self.route_point_dict[p] = width
+
+    def cardinal_helper(self, router_temp, manh, start_pt, start_dir, start_layer, offset, dirs=None, start=None):
+        """
+        Helper method for cardinal router in order to create routes that are offset by some amount from a given router
+        """
+        if not dirs:
+            # Calculate sequence of routing directions
+            dirs = []
+
+            for i in range(len(manh) - 1):
+                pt0 = manh[i]
+                pt1 = manh[i + 1]
+
+                if pt0[0][0] > pt1[0][0]:
+                    dirs.append('-x')
+                elif pt0[0][0] < pt1[0][0]:
+                    dirs.append('+x')
+                elif pt0[0][1] > pt1[0][1]:
+                    dirs.append('-y')
+                else:
+                    dirs.append('+y')
+
+        # Determine initial offset direction of routes from center
+        if not start:
+            if start_pt[0] > manh[1][0][0]:
+                start = (0, -1)
+            elif start_pt[0] < manh[1][0][0]:
+                start = (0, 1)
+            elif start_pt[1] > manh[1][0][1]:
+                start = (1, 0)
+            else:
+                start = (-1, 0)
+
+        for i in range(len(dirs)):
+            if i == 0:
+                # Determine start point of new route relative to given route
+                shield_start = ((start_pt[0] + offset * start[0],
+                                 start_pt[1] + offset * start[1]), start_layer)
+
+                # Initialize new router
+                router = EZRouter(self.gen)
+                router.new_route_from_location(shield_start[0], start_dir, start_layer, 0.5)
+            else:
+                pt0 = manh[i]
+                # Get offset direction given previous routing direction and current routing direction
+                direc = self.shield_dict[dirs[i - 1]][dirs[i]]
+
+                # Determine new point in route based on offset and add to router
+                point = (pt0[0][0] + offset * direc[0],
+                         pt0[0][1] + offset * direc[1])
+                router.add_route_points([point], pt0[1], width=router_temp.route_point_dict[pt0[0]])
+
+        # Determine final offset direction of routes from center and add final point to router
+        if manh[-2][0][0] > manh[-1][0][0]:
+            end = (0, -1)
+        elif manh[-2][0][0] < manh[-1][0][0]:
+            end = (0, 1)
+        elif manh[-2][0][1] > manh[-1][0][1]:
+            end = (1, 0)
+        else:
+            end = (-1, 0)
+
+        router.add_route_points(
+            [(manh[-1][0][0] + offset * end[0],
+              manh[-1][0][1] + offset * end[1])], manh[-1][1],
+            width=router_temp.route_point_dict[manh[-1][0]])
+
+        manh = router.manhattanize_point_list(start_dir, (shield_start[0], start_layer), router.route_points)
+
+        return router, manh, shield_start
+
     def cardinal_router(self,
-                        points: List[Tuple],
+                        points: List[Tuple] = None,
                         relative_coords: bool = False,
+                        enc_style: str = 'uniform',
+                        prim: bool = True,
+                        clear_route: bool = True
                         ):
         """
         Creates a route network that contains all provided points. Any required vias use the user provided
@@ -460,6 +615,12 @@ class EZRouter:
         relative_coords : bool
             True if the list of coordinates are relative to the starting port's coordinate.
             False if the list of coordinates are absolute relative to the current Template's origin
+        enc_style : str
+            Via enclosure style to use
+        prim : bool
+            True to use primitive vias
+        clear_route : bool
+            True to clear self.route_point_dict and self.route_points in order to instantiate another route
 
         Returns
         -------
@@ -468,6 +629,12 @@ class EZRouter:
         """
         if not self.current_rect or not self.current_handle or not self.current_dir:
             raise ValueError('Router has not been initialized, please call new_route()')
+
+        if not points:
+            points = self.route_points
+        else:
+            for point in points:
+                self.route_point_dict[tuple(point[0])] = self.config[point[1]]['width']
 
         current_dir = self.current_dir
         current_point = (self.current_rect[self.current_handle].xy, self.current_rect.layer)
@@ -481,25 +648,38 @@ class EZRouter:
         manh_point_list = self.manhattanize_point_list(initial_direction=current_dir,
                                                        initial_point=current_point,
                                                        points=points)
+
+        for i in range(len(manh_point_list)):
+            point = manh_point_list[i]
+            if tuple(point[0]) not in self.route_point_dict:
+                if i != 0:
+                    self.route_point_dict[tuple(point[0])] = self.route_point_dict[tuple(manh_point_list[i - 1][0])]
+
         # Simplify the point list so that each point corresponds with a bend of the route, i.e. no co-linear points
-        final_point_list = manh_point_list
-        final_point_list = final_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
+        final_point_list = manh_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
 
         # Draw a series of L-routes to follow the final simplified point list
         for pt0, pt1 in zip(final_point_list, final_point_list[1:]):
             # print(f'drawing route {pt0[0]} -> {pt1[0]} on layer {pt0[1]}')
             self._draw_route_segment(pt0=pt0,
                                      pt1=pt1,
-                                     in_width=self.config[self.current_rect.layer]['width'],
-                                     out_width=self.config[pt0[1]]['width'],
-                                     enc_style='asymm')
+                                     in_width=self.route_point_dict[tuple(pt0[0])],
+                                     out_width=self.route_point_dict[tuple(pt1[0])],
+                                     enc_style=enc_style,
+                                     prim=prim)
 
         # The loop does not draw the final straight segment, so add it here
         self._draw_route_segment(pt0=final_point_list[-1],
                                  pt1=None,
-                                 in_width=self.config[self.current_rect.layer]['width'],
-                                 out_width=self.config[final_point_list[-1][1]]['width'],
-                                 enc_style='uniform')
+                                 in_width=self.route_point_dict[tuple(final_point_list[-1][0])],
+                                 out_width=self.route_point_dict[final_point_list[-1][0]],
+                                 enc_style='uniform',
+                                 prim=prim)
+
+        # Clear instance variables for future routes
+        if clear_route:
+            self.route_points = []
+            self.route_point_dict = {}
 
     def _draw_route_segment(self,
                             pt0: Tuple[Union[Tuple[float, float], XY], str],
@@ -509,6 +689,7 @@ class EZRouter:
                             out_width: Optional[float] = None,
                             enc_bot: Optional[List[float]] = None,
                             enc_top: Optional[List[float]] = None,
+                            prim: bool = True
                             ) -> 'EZRouter':
         """
         Draws a single straight route to pt0 then changes the direction of the route to be able to
@@ -531,6 +712,8 @@ class EZRouter:
             If provided, will use these enclosure settings for the bottom layer of the via
         enc_top : Optional[List[float]]
             If provided, will use these enclosure settings for the top layer of the via
+        prim : bool
+            True to use primitive vias
 
         Returns
         -------
@@ -557,11 +740,19 @@ class EZRouter:
             if self.current_dir == '+x' or self.current_dir == '-x':
                 if self.current_rect[self.current_handle].y < XY(pt1[0]).y:
                     direction = '+y'
+                elif self.current_rect[self.current_handle].y == XY(pt1[0]).y and self.current_rect[self.current_handle].x < XY(pt1[0]).x:
+                    direction = '+x'
+                elif self.current_rect[self.current_handle].y == XY(pt1[0]).y:
+                    direction = '-x'
                 else:
                     direction = '-y'
             else:
                 if self.current_rect[self.current_handle].x < XY(pt1[0]).x:
                     direction = '+x'
+                elif self.current_rect[self.current_handle].x == XY(pt1[0]).x and self.current_rect[self.current_handle].y < XY(pt1[0]).y:
+                    direction = '+y'
+                elif self.current_rect[self.current_handle].x == XY(pt1[0]).x:
+                    direction = '-y'
                 else:
                     direction = '-x'
         # If no next point is provided because it is at the end of the route, just use the
@@ -574,7 +765,8 @@ class EZRouter:
                       enc_style=enc_style,
                       out_width=out_width,
                       enc_top=enc_top,
-                      enc_bot=enc_bot)
+                      enc_bot=enc_bot,
+                      prim=prim)
         return self
 
     @staticmethod
@@ -630,7 +822,7 @@ class EZRouter:
                     current_point = manh_point_list[-1]
                     current_dir = 'x'
             # If the point does not move ignore it to avoid adding co-linear points
-            elif dx == 0 and dy == 0:
+            elif dx == 0 and dy == 0 and next_point[1] == current_point[1]:
                 continue
             # If the next point only changes in one direction and it is not co-linear
             else:
@@ -640,7 +832,40 @@ class EZRouter:
                     current_dir = 'y'
                 else:
                     current_dir = 'x'
-        return manh_point_list
+
+        # Remove any co-linear points that are on the same metal layer
+        del_idx = []
+        for i in range(len(manh_point_list) - 2):
+            pt0 = manh_point_list[i]
+            pt1 = manh_point_list[i + 1]
+            pt2 = manh_point_list[i + 2]
+
+            if pt0[0][0] == pt1[0][0] == pt2[0][0] and (pt0[0][1] <= pt1[0][1] <= pt2[0][1] or pt0[0][1] >= pt1[0][1]
+                                                        >= pt2[0][1]) and pt0[1] == pt1[1] == pt2[1]:
+                del_idx.append(i + 1)
+            elif pt0[0][1] == pt1[0][1] == pt2[0][1] and (pt0[0][0] <= pt1[0][0] <= pt2[0][0] or pt0[0][0] >= pt1[0][0]
+                                                          >= pt2[0][0]) and pt0[1] == pt1[1] == pt2[1]:
+                del_idx.append(i + 1)
+
+        return [manh_point_list[i] for i in range(len(manh_point_list)) if i not in del_idx]
+
+    def add_relative_route_point(self,
+                                 ref_rect: Rectangle,
+                                 ref_handle: str,
+                                 layer: str,
+                                 width: float,
+                                 offset: Tuple[float, float] = None,
+                                 ):
+        """
+        Adds a point to the routing path relative to some given rectangle and optional offset
+        """
+        if len(ref_handle) == 1 and ref_handle != 'c':
+            raise ValueError("Edge handles are invalid reference handles")
+        temp_point = ref_rect.loc[ref_handle]
+        offset_point = XY([temp_point.x + offset[0], temp_point.y + offset[1]])
+        self.route_points.append((offset_point, layer))
+        self.route_point_dict[offset_point] = width
+
 
     ''' Old Routing Methods to be Deprecated '''
 

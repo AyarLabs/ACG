@@ -149,3 +149,7 @@ class XY(VirtualObj):
         new_xy = np.transpose(np.matmul(transform, np.transpose(np.asarray(self.xy))))
         # Convert to XY coordinates and return shifted coordinate
         return XY(new_xy) + XY(origin)
+
+    def __lt__(self, other):
+        """Used to sort XY in min heap"""
+        return self.x < other.x
