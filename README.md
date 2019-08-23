@@ -1,4 +1,5 @@
 # ACG
+[![Documentation Status](https://readthedocs.org/projects/acg/badge/?version=latest)](https://acg.readthedocs.io/en/latest/?badge=latest)
 Arbitrary Cell Generator is a plugin to Berkeley Analog Generator 2.0 (BAG) that enables parametrized
 grid-free layout creation. Documentation can be found at <https://acg.readthedocs.io>. The main goal of ACG is
 to make it easy to create highly customized layout generators that may not be possible in BAG due to its
