@@ -54,11 +54,6 @@ class EZRouter:
             via_list=[],
         )
 
-        # If the user provided information for a new route, create one
-        if start_rect and start_direction:
-            self.new_route(start_rect=start_rect,
-                           start_direction=start_direction)
-
         self.route_points = []
         self.route_point_dict = {}
 
@@ -90,6 +85,10 @@ class EZRouter:
             }
         }
 
+        # If the user provided information for a new route, create one
+        if start_rect and start_direction:
+            self.new_route(start_rect=start_rect,
+                           start_direction=start_direction)
 
     ''' Set up properties to perform run-time checking on router state variables '''
 
