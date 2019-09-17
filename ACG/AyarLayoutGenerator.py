@@ -303,6 +303,11 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                 temp = ViaStack(rect1, rect2, size=size, extend=extend)
                 self._db['via'].append(temp)
             return temp
+        else:
+            temp = self.add_rect(rect1.layer)
+            temp.ll =(min(rect1.ll.x, rect2.ll.x), min(rect1.ll.y, rect2.ll.y))
+            temp.ur = (max(rect1.ur.x, rect2.ur.x), max(rect1.ur.y, rect2.ur.y))
+            return temp
 
     def add_prim_via(self,
                      via_id: str,
