@@ -269,6 +269,21 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
                                          'cellname': cellname,
                                          'data': data},
                                  temp_cls=CadenceLayout)
+    
+    def check_overlap(self, rect0, rect1):
+        # Determine bounds of the intersection in x dimension
+        x_min = max(rect0.ll.x, rect1.ll.x)
+        x_max = min(rect0.ur.x, rect1.ur.x)
+
+        # Determine bounds of the intersection in y dimension
+        y_min = max(rect0.ll.y, rect1.ll.y)
+        y_max = min(rect0.ur.y, rect1.ur.y)
+
+        # flag
+        if x_min > x_max or y_min > y_max:
+            return 'no'
+        else:
+            return 'yes'
 
     def connect_wires(self,
                       rect1: Rectangle,
@@ -296,18 +311,24 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
             if True, will attempt to create a single primitive via instead of a via stack
         """
         if rect1.layer != rect2.layer:
-            if prim:
-                temp = Via.from_metals(rect1, rect2, size=size)
-                self._db['prim_via'].append(temp)
+            if self.check_overlap(rect1, rect2) is 'yes':
+                if prim:
+                    temp = Via.from_metals(rect1, rect2, size=size)
+                    self._db['prim_via'].append(temp)
+                else:
+                    temp = ViaStack(rect1, rect2, size=size, extend=extend)
+                    self._db['via'].append(temp)
+                return temp
             else:
-                temp = ViaStack(rect1, rect2, size=size, extend=extend)
-                self._db['via'].append(temp)
-            return temp
+                raise ValueError('No overlap between rect1 and rect2')
         else:
-            temp = self.add_rect(rect1.layer)
-            temp.ll =(min(rect1.ll.x, rect2.ll.x), min(rect1.ll.y, rect2.ll.y))
-            temp.ur = (max(rect1.ur.x, rect2.ur.x), max(rect1.ur.y, rect2.ur.y))
-            return temp
+            if self.check_overlap(rect1, rect2) is 'yes':
+                temp = self.add_rect(rect1.layer)
+                temp.ll =(max(rect1.ll.x, rect2.ll.x), max(rect1.ll.y, rect2.ll.y))
+                temp.ur = (min(rect1.ur.x, rect2.ur.x), min(rect1.ur.y, rect2.ur.y))
+                return temp
+            else:
+                raise ValueError('No overlap between rect1 and rect2')
 
     def add_prim_via(self,
                      via_id: str,
