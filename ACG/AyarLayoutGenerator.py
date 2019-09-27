@@ -111,9 +111,19 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
             (Rectangle):
                 the created rectangle object
         """
+        layer_params = tech_info.tech_info['metal_tech']['metals']
+        if type(layer) is list:
+            default_w = 0.1
+        elif layer in layer_params:
+            metal_params = tech_info.tech_info['metal_tech']['metals'][layer]
+            if 'min_width' in metal_params:
+                default_w = metal_params['min_width']
+            else:
+                default_w = 0.1
+        else:
+            default_w = 0.1
         if xy is None:
-            xy = [[0, 0], [.1, .1]]
-        temp = Rectangle(xy, layer, virtual=virtual)
+            xy = [[0, 0], [default_w, default_w]]
         self._db['rect'].append(temp)
         return self._db['rect'][-1]
 
