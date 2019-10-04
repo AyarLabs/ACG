@@ -328,6 +328,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
             if True, will attempt to create a single primitive via instead of a via stack
         """
         # Only create a via if the two rectangles are actually on different layers
+        # TODO: Add support for returning empty vias when the two layers are the same
         if rect1.layer != rect2.layer:
             if self.check_overlap(rect1, rect2) is 'yes':
                 if prim:
