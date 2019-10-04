@@ -111,25 +111,32 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
             (Rectangle):
                 the created rectangle object
         """
-        layer_params = tech_info.tech_info['metal_tech']['metals']
-        if type(layer) is list:
-            default_w = 0.1
-        elif layer in layer_params:
-            metal_params = tech_info.tech_info['metal_tech']['metals'][layer]
-            if 'min_width' in metal_params:
+        # Only try default sizing if the user does not provide xy coordinates
+        if xy is None:
+            layer_params = tech_info.tech_info['metal_tech']['metals']
+
+            # This variable holds the name of the metal to be looked up in the tech params
+            layer_lookup = layer
+            if isinstance(layer, list):
+                layer_lookup = layer[0]
+
+            # If we can find our layer in the metal tech params, use its default width
+            if layer_lookup in layer_params:
+                metal_params = tech_info.tech_info['metal_tech']['metals'][layer_lookup]
                 default_w = metal_params['min_width']
+            # Otherwise just default to 100nm width
             else:
                 default_w = 0.1
-        else:
-            default_w = 0.1
-        if xy is None:
             xy = [[0, 0], [default_w, default_w]]
-        self._db['rect'].append(temp)
+
+        # Otherwise just directly create the rectangle according to the users specification
+        self._db['rect'].append(Rectangle(xy, layer=layer, virtual=virtual))
         return self._db['rect'][-1]
 
-    def copy_rect(self, rect,  # type: Rectangle
+    def copy_rect(self,
+                  rect: Rectangle,
                   layer=None,  # type: Union[str, Tuple[str, str]]
-                  virtual=False  # type: bool
+                  virtual: bool = False
                   ) -> Rectangle:
         """
         Creates a copy of the given rectangle and adds it to the local db
@@ -320,6 +327,7 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
         prim: bool
             if True, will attempt to create a single primitive via instead of a via stack
         """
+        # Only create a via if the two rectangles are actually on different layers
         if rect1.layer != rect2.layer:
             if self.check_overlap(rect1, rect2) is 'yes':
                 if prim:
