@@ -5,7 +5,7 @@ to describe layout generation scripts in the Python language and automate the la
 
 # General imports
 import abc
-from typing import Union, Tuple, List
+from typing import Union, Tuple, List, Optional
 import re
 import yaml
 import os
@@ -91,27 +91,39 @@ class AyarLayoutGenerator(TemplateBase, metaclass=abc.ABCMeta):
     """ DO NOT OVERRIDE """
 
     def add_rect(self,
-                 layer: Union[str, Tuple[str, str], List[str]],
+                 layer: Optional[Union[str, Tuple[str, str], List[str]]] = None,
                  xy=None,
-                 virtual: bool = False
+                 virtual: bool = False,
+                 *,
+                 index: Optional[int] = None
                  ) -> Rectangle:
         """
         Instantiates a rectangle, adds the Rectangle object to local db, and returns it for further user manipulation
 
-        Args:
-            layer (str):
-                layer that the rectangle should be drawn on
-            xy (Tuple[[float, float], [float, float]]):
-                list of xy coordinates representing the lower left and upper right corner of the rectangle. If None,
-                select default size of 100nm by 100nm at origin
-            virtual (bool):
-                 If true, the rectangle object will be created but will not be drawn in the final layout. If false, the
-                 rectangle will be drawn as normal in the final layout
-        Returns:
-            (Rectangle):
-                the created rectangle object
+        Parameters
+        ----------
+        layer : Optional[str]
+            layer that the rectangle should be drawn on
+        xy : Tuple[[float, float], [float, float]]
+            list of xy coordinates representing the lower left and upper right corner of the rectangle. If None,
+            select default size of 100nm by 100nm at origin
+        virtual : bool
+             If true, the rectangle object will be created but will not be drawn in the final layout. If false, the
+             rectangle will be drawn as normal in the final layout
+        index : Optional[int]
+            If provided, will look up the layer name associated with the index, and then draw the rectangle on
+            that layer.
+
+        Returns
+        -------
+        rect: Rectangle
+            the created rectangle object
         """
-        # Only try default sizing if the user does not provide xy coordinates
+        # If a layer index is provided, reverse-lookup the layer name
+        if index is not None:
+            layer = self.grid.tech_info.get_layer_name(index)
+
+        # Only try default sizing if the user does not provide xy coordinate
         if xy is None:
             layer_params = tech_info.tech_info['metal_tech']['metals']
 
