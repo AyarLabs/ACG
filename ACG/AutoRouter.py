@@ -234,12 +234,12 @@ class EZRouter:
         if not self.current_rect or not self.current_handle or not self.current_dir:
             raise ValueError('Router has not been initialized, please call new_route()')
 
-        print('===In draw_straight_route, starting  rect %s, direction %s'  % (self.current_rect, self.current_dir))
+        # print('===In draw_straight_route, starting  rect %s, direction %s'  % (self.current_rect, self.current_dir))
 
         # Make a new rectangle and align it to the current route location
         new_rect = self.gen.add_rect(layer=self.current_rect.layer)
-        print('===In draw_straight_route, layer = %s, width = %f, loc=%s' 
-              % (self.current_rect.layer, width, str(loc)))
+        # print('===In draw_straight_route, layer = %s, width = %f, loc=%s'
+        #       % (self.current_rect.layer, width, str(loc)))
 
         # Size the new rectangle to match the current route width
         if self.current_dir == '+x' or self.current_dir == '-x':
@@ -663,21 +663,21 @@ class EZRouter:
         # final_point_list = manh_point_list[1:]  # Ignore the first pt, since it is co-incident with the starting port
         final_point_list = manh_point_list  # Ignore the first pt, since it is co-incident with the starting port
 
-        print('---In cardinal router, manh_point_list:')
-        print(manh_point_list)
-        print('---In cardinal router, route_point_dict:')
-        print(self.route_point_dict)
-        print('---In cardinal router, final_point_list:')
-        print(final_point_list)
+        # print('---In cardinal router, manh_point_list:')
+        # print(manh_point_list)
+        # print('---In cardinal router, route_point_dict:')
+        # print(self.route_point_dict)
+        # print('---In cardinal router, final_point_list:')
+        # print(final_point_list)
 
         # Draw a series of L-routes to follow the final simplified point list
         # for pt0, pt1 in zip(final_point_list, final_point_list[1:]):
             # print(f'drawing route {pt0[0]} -> {pt1[0]} on layer {pt0[1]}')
         for index_point in range(1, len(final_point_list) - 1):
-            print(' ')
-            print('Drawing route with width from %s to %s and turn towards %s' 
-                  % (final_point_list[index_point - 1], final_point_list[index_point], 
-                     final_point_list[index_point + 1]))
+            # print(' ')
+            # print('Drawing route with width from %s to %s and turn towards %s'
+            #       % (final_point_list[index_point - 1], final_point_list[index_point],
+            #          final_point_list[index_point + 1]))
             self._draw_route_segment(pt0=final_point_list[index_point],
                                      pt1=final_point_list[index_point + 1],
                                      in_width=self.route_point_dict[tuple(final_point_list[index_point - 1][0])],
@@ -686,9 +686,9 @@ class EZRouter:
                                      prim=prim)
 
         # The loop does not draw the final straight segment, so add it here
-        print(' ')
-        print('Drawing route with width from %s to %s and stop' 
-              % (final_point_list[index_point - 1], final_point_list[index_point]))
+        # print(' ')
+        # print('Drawing route with width from %s to %s and stop'
+        #       % (final_point_list[index_point - 1], final_point_list[index_point]))
         self._draw_route_segment(pt0=final_point_list[-1],
                                  pt1=None,
                                  in_width=self.route_point_dict[tuple(final_point_list[-1][0])],
@@ -743,9 +743,9 @@ class EZRouter:
         if not self.current_rect or not self.current_handle or not self.current_dir:
             raise ValueError('Router has not been initialized, please call new_route()')
 
-        print('In _draw_route_segment, in_width = %f, out_width = %f' 
-              % (in_width,out_width))
-        print('In _draw_route_segment, pt0=%s, pt1=%s' % (str(pt0), str(pt1)))
+        # print('In _draw_route_segment, in_width = %f, out_width = %f'
+        #       % (in_width,out_width))
+        # print('In _draw_route_segment, pt0=%s, pt1=%s' % (str(pt0), str(pt1)))
 
         # Draw the first straight route segment
         self.draw_straight_route(loc=pt0[0], width=in_width)
