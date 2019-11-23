@@ -692,7 +692,7 @@ class EZRouter:
         self._draw_route_segment(pt0=final_point_list[-1],
                                  pt1=None,
                                  in_width=self.route_point_dict[tuple(final_point_list[-1][0])],
-                                 out_width=self.route_point_dict[final_point_list[-1][0]],
+                                 out_width=self.route_point_dict[tuple(final_point_list[-1][0])],
                                  enc_style='uniform',
                                  prim=prim)
 
