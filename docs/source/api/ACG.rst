@@ -12,6 +12,14 @@ ACG.AutoRouter module
     :undoc-members:
     :show-inheritance:
 
+ACG.AutoRouterExtension module
+------------------------------
+
+.. automodule:: ACG.AutoRouterExtension
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ACG.AyarDesignManager module
 ----------------------------
 

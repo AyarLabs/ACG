@@ -5,8 +5,9 @@ This chapter contains a set of examples that describe how to do several common d
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   Cadence_ACG_Mix.md
-   Floorplanning.md
-   Autorouting.md
-   Transistor.md
+   Cadence_ACG_Mix
+   Floorplanning
+   Autorouting
+   Transistor
