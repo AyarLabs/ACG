@@ -273,5 +273,7 @@ class AyarDesignManager:
                               routing_grid,
                               self.impl_lib,
                               use_cybagoa=True,
+                              name_prefix=self.specs.get('name_prefix', ''),
+                              name_suffix=self.specs.get('name_suffix', ''),
                               prj=self.prj,
                               gds_lay_file=layermap)
