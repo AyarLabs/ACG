@@ -394,6 +394,7 @@ class EZRouter:
                     else:
                         via.set_enclosure(enc_top=[enc_small, enc_small, enc_large, enc_large])
 
+            new_rect_2 = self.gen.copy_rect(new_rect, layer=self.current_rect.layer)
             # Set via parameters
             if size is not None:
                 via.size = size
