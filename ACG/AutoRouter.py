@@ -678,6 +678,22 @@ class EZRouter:
             # print('Drawing route with width from %s to %s and turn towards %s'
             #       % (final_point_list[index_point - 1], final_point_list[index_point],
             #          final_point_list[index_point + 1]))
+            current_dir_dim = 0 if ('x' in self.current_dir) else 1
+            current_dir_sgn = 1 if ('+' in self.current_dir) else -1
+            current_pos_dim = (self.current_rect.loc['c'].x if ('x' in self.current_dir) 
+                               else self.current_rect.loc['c'].y)
+            forward = current_dir_sgn * (final_point_list[index_point][0][current_dir_dim] - current_pos_dim)
+            if( forward < -1e-3): 
+                print('In AutoRouter, testing that next point is towards the current_dir:')
+                print(final_point_list[index_point + 1])
+                print(self.current_rect)
+                print(current_dir_sgn)
+                print(current_pos_dim)
+                print('From %f to %f' % (current_pos_dim, final_point_list[index_point][0][current_dir_dim]))
+                print('This should not be negative: ')
+                print(forward)
+                raise RuntimeError('routing point is not in current_dir')
+
             self._draw_route_segment(pt0=final_point_list[index_point],
                                      pt1=final_point_list[index_point + 1],
                                      in_width=self.route_point_dict[tuple(final_point_list[index_point - 1][0])],
