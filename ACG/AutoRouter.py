@@ -702,7 +702,7 @@ class EZRouter:
                 print('From %f to %f' % (current_pos_dim, final_point_list[index_point][0][current_dir_dim]))
                 print('This should not be negative: ')
                 print(forward)
-                # raise RuntimeError('routing point is not in current_dir')
+                raise RuntimeError('routing point is not in current_dir')
 
             self._draw_route_segment(pt0=final_point_list[index_point],
                                      pt1=final_point_list[index_point + 1],
